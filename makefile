@@ -1,6 +1,7 @@
 assembly:
 	go tool compile -S x.go
 
+.PHONY: test
 test:
 	go test ./... --cover -coverprofile=reports/coverage.out --covermode atomic --coverpkg=./...
 

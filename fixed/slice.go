@@ -1,6 +1,7 @@
 package fixed
 
 import (
+	"iter"
 	"sync"
 
 	"github.com/daanv2/go-kit/generics"
@@ -89,6 +90,19 @@ func (s *Slice[T]) UnsafeSet(index int, value T) bool {
 	return true
 }
 
+func (s *Slice[T]) Find(predicate func(v T) bool) (T, bool) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	for _, v := range s.items {
+		if predicate(v) {
+			return v, true
+		}
+	}
+
+	return generics.Empty[T](), false
+}
+
 // TryAppend will check how much space is left, and attempt to write as much as possible from the given data into its own buffer
 //
 // If you have 5 items, and there is room for 3, it will return 3, and has added 3 items to its buffer
@@ -107,4 +121,17 @@ func (s *Slice[T]) TryAppend(items ...T) int {
 
 	s.items = append(s.items, items...)
 	return len(items)
+}
+
+func (s *Slice[T]) Read() iter.Seq[T] {
+	return func(yield func(T) bool) {
+		s.lock.RLock()
+		defer s.lock.RUnlock()
+
+		for _, item := range s.items {
+			if !yield(item) {
+				return
+			}
+		}
+	}
 }
