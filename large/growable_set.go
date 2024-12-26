@@ -19,6 +19,14 @@ type SetBase struct {
 	items_lock  *locks.Pool
 }
 
+func NewSetBase[T any]() SetBase {
+	return SetBase{
+		bucket_size: optimal.SliceSize[T](),
+		bucket_lock: &sync.RWMutex{},
+		items_lock:  locks.NewPool(),
+	}
+}
+
 type GrowableSet[T constraints.Equivalent[T]] struct {
 	SetBase
 	hasher  hash.Hasher[T]
@@ -26,12 +34,7 @@ type GrowableSet[T constraints.Equivalent[T]] struct {
 }
 
 func NewGrowableSet[T constraints.Equivalent[T]](hasher hash.Hasher[T], opts ...options.Option[SetBase]) (*GrowableSet[T], error) {
-	base := SetBase{
-		bucket_size: optimal.SliceSize[T](),
-		bucket_lock: &sync.RWMutex{},
-		items_lock:  locks.NewPool(),
-	}
-
+	base := NewSetBase[T]()
 	err := options.Apply(&base, opts...)
 	if err != nil {
 		return nil, err
@@ -56,19 +59,24 @@ func NewGrowableSet[T constraints.Equivalent[T]](hasher hash.Hasher[T], opts ...
 
 func (s *GrowableSet[T]) GetOrAdd(item T) (T, bool) {
 	setitem := NewSetItem[T](item, s.hasher.Hash(item))
-	item_lock := s.items_lock.GetLock(setitem.hash)
+
+	return s.getOrAdd(setitem)
+}
+
+func (s *GrowableSet[T]) getOrAdd(item SetItem[T]) (T, bool) {
+	item_lock := s.items_lock.GetLock(item.hash)
 
 	item_lock.Lock()
 	defer item_lock.Unlock()
 
 	// Find it
-	v, ok := s.find(setitem)
+	v, ok := s.find(item)
 	if ok {
 		return v.Value(), false
 	}
 
-	s.set(setitem)
-	return setitem.Value(), true
+	s.set(item)
+	return item.Value(), true
 }
 
 func (s *GrowableSet[T]) find(item SetItem[T]) (SetItem[T], bool) {

@@ -9,15 +9,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_GrowableSet(t *testing.T) {
-	sizes := []int{100, 200, 300, 400, 1000, 10000, 20000}
+func Test_BuckettedSet(t *testing.T) {
+	sizes := []uint64{100, 200, 300, 400, 1000, 10000, 20000}
 
 	for _, size := range sizes {
 		t.Run(fmt.Sprintf("Concurrenty(%v)", size), func(t *testing.T) {
-			col, err := large.NewGrowableSet[*test_util.TestItem](test_util.Hasher())
+			col, err := large.NewBuckettedSet[*test_util.TestItem](size*10, test_util.Hasher())
 			require.NoError(t, err)
 
-			items := test_util.Generate(size)
+			items := test_util.Generate(int(size))
 			test_util.Shuffle(items)
 
 			for _, item := range items {
@@ -29,15 +29,15 @@ func Test_GrowableSet(t *testing.T) {
 	}
 }
 
-func Test_GrowableSet_Concurrency(t *testing.T) {
-	sizes := []int{100, 200, 300, 400, 1000, 10000, 20000}
+func Test_BuckettedSet_Concurrency(t *testing.T) {
+	sizes := []uint64{100, 200, 300, 400, 1000, 10000, 20000}
 
 	for _, size := range sizes {
 		t.Run(fmt.Sprintf("Concurrenty(%v)", size), func(t *testing.T) {
-			col, err := large.NewGrowableSet[*test_util.TestItem](test_util.Hasher())
+			col, err := large.NewBuckettedSet[*test_util.TestItem](size*10, test_util.Hasher())
 			require.NoError(t, err)
 
-			items := test_util.Generate(size)
+			items := test_util.Generate(int(size))
 			test_util.Shuffle(items)
 
 			splitWithOverlap(col, items)
@@ -51,16 +51,16 @@ func Test_GrowableSet_Concurrency(t *testing.T) {
 	}
 }
 
-func Benchmark_GrowableSet_Concurrency(t *testing.B) {
-	sizes := []int{100, 200, 300, 400, 1000, 10000, 20000}
+func Benchmark_BuckettedSet_Concurrency(t *testing.B) {
+	sizes := []uint64{100, 200, 300, 400, 1000, 10000, 20000}
 
 	for _, size := range sizes {
 		t.Run(fmt.Sprintf("Concurrenty(%v)", size), func(t *testing.B) {
 			for i := 0; i < t.N; i++ {
-				col, err := large.NewGrowableSet[*test_util.TestItem](test_util.Hasher())
+				col, err := large.NewBuckettedSet[*test_util.TestItem](size*10, test_util.Hasher())
 				require.NoError(t, err)
 
-				items := test_util.Generate(size)
+				items := test_util.Generate(int(size))
 				test_util.Shuffle(items)
 
 				splitWithOverlap(col, items)
