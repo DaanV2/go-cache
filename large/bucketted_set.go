@@ -5,9 +5,11 @@ import (
 
 	"github.com/daanv2/go-cache/pkg/constraints"
 	"github.com/daanv2/go-cache/pkg/hash"
+	"github.com/daanv2/go-cache/pkg/iterators"
 	"github.com/daanv2/go-cache/pkg/options"
 )
 
+// BuckettedSet is a set of items, that uses a pre-defined amount of buckets, each item generates an hash, from which a bucket can be specified
 type BuckettedSet[T constraints.Equivalent[T]] struct {
 	hasher hash.Hasher[T]
 	sets   []*GrowableSet[T]
@@ -40,9 +42,18 @@ func NewBuckettedSet[T constraints.Equivalent[T]](cap uint64, hasher hash.Hasher
 
 func (s *BuckettedSet[T]) GetOrAdd(item T) (T, bool) {
 	setitem := NewSetItem[T](item, s.hasher.Hash(item))
-
-	bucket := setitem.hash % uint64(len(s.sets))
+	bucket := s.bucketIndex(setitem)
 	return s.sets[bucket].getOrAdd(setitem)
+}
+
+func (s *BuckettedSet[T]) UpdateOrAdd(item T) bool {
+	setitem := NewSetItem[T](item, s.hasher.Hash(item))
+	bucket := s.bucketIndex(setitem)
+	return s.sets[bucket].updateOrAdd(setitem)
+}
+
+func (s *BuckettedSet[T]) bucketIndex(item SetItem[T]) uint64 {
+	return item.hash % uint64(len(s.sets))
 }
 
 func (s *BuckettedSet[T]) Read() iter.Seq[T] {
@@ -55,4 +66,12 @@ func (s *BuckettedSet[T]) Read() iter.Seq[T] {
 			}
 		}
 	}
+}
+
+func (s *BuckettedSet[T]) Range(yield func(item T) bool) {
+	iterators.RangeCol(s, yield)
+}
+
+func (s *BuckettedSet[T]) RangeParralel(yield func(item T) bool) {
+	iterators.RangeColParralel(s.sets, yield)
 }

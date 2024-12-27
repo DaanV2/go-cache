@@ -103,6 +103,19 @@ func (s *Slice[T]) Find(predicate func(v T) bool) (T, bool) {
 	return generics.Empty[T](), false
 }
 
+func (s *Slice[T]) FindIndex(predicate func(v T) bool) (int, bool) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	for i, v := range s.items {
+		if predicate(v) {
+			return i, true
+		}
+	}
+
+	return -1, false
+}
+
 // TryAppend will check how much space is left, and attempt to write as much as possible from the given data into its own buffer
 //
 // If you have 5 items, and there is room for 3, it will return 3, and has added 3 items to its buffer

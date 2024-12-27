@@ -13,9 +13,7 @@ type WrappedHasher[T go_hash.Hash] struct {
 }
 
 func NewWrappedHasher[T go_hash.Hash](base T) *WrappedHasher[T] {
-	return &WrappedHasher[T]{
-		base: base,
-	}
+	return &WrappedHasher[T]{ base }
 }
 
 func (w *WrappedHasher[T]) Sum() uint64 {

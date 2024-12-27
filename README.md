@@ -1,5 +1,7 @@
 # Cache
 
+[![Pipeline](https://github.com/DaanV2/go-cache/actions/workflows/pipeline.yaml/badge.svg)](https://github.com/DaanV2/go-cache/actions/workflows/pipeline.yaml)
+
 [WIP] some cache usable for large amount of storage of items
 
 ```go

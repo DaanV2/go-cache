@@ -8,6 +8,7 @@ import (
 	"github.com/daanv2/go-cache/fixed"
 	"github.com/daanv2/go-cache/pkg/constraints"
 	"github.com/daanv2/go-cache/pkg/hash"
+	"github.com/daanv2/go-cache/pkg/iterators"
 	"github.com/daanv2/go-cache/pkg/options"
 	"github.com/daanv2/go-locks"
 	optimal "github.com/daanv2/go-optimal"
@@ -63,6 +64,12 @@ func (s *GrowableSet[T]) GetOrAdd(item T) (T, bool) {
 	return s.getOrAdd(setitem)
 }
 
+func (s *GrowableSet[T]) UpdateOrAdd(item T) bool {
+	setitem := NewSetItem[T](item, s.hasher.Hash(item))
+
+	return s.updateOrAdd(setitem)
+}
+
 func (s *GrowableSet[T]) getOrAdd(item SetItem[T]) (T, bool) {
 	item_lock := s.items_lock.GetLock(item.hash)
 
@@ -77,6 +84,23 @@ func (s *GrowableSet[T]) getOrAdd(item SetItem[T]) (T, bool) {
 
 	s.set(item)
 	return item.Value(), true
+}
+
+// updateOrAdd TODO. return true if it had to add it instead of update
+func (s *GrowableSet[T]) updateOrAdd(item SetItem[T]) bool {
+	item_lock := s.items_lock.GetLock(item.hash)
+
+	item_lock.Lock()
+	defer item_lock.Unlock()
+
+	// Find it
+	ok := s.updateIf(item)
+	if ok {
+		return false
+	}
+
+	s.set(item)
+	return true
 }
 
 func (s *GrowableSet[T]) find(item SetItem[T]) (SetItem[T], bool) {
@@ -94,6 +118,24 @@ func (s *GrowableSet[T]) find(item SetItem[T]) (SetItem[T], bool) {
 	}
 
 	return item, false
+}
+
+func (s *GrowableSet[T]) updateIf(item SetItem[T]) bool {
+	s.bucket_lock.RLock()
+	defer s.bucket_lock.RUnlock()
+
+	// Try to find it
+	for i := range s.buckets {
+		index, ok := s.buckets[i].FindIndex(func(v SetItem[T]) bool {
+			return v.Equals(item)
+		})
+		if ok {
+			_ = s.buckets[i].Set(index, item)
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *GrowableSet[T]) set(item SetItem[T]) {
@@ -131,4 +173,8 @@ func (s *GrowableSet[T]) Read() iter.Seq[T] {
 			}
 		}
 	}
+}
+
+func (s *GrowableSet[T]) Range(yield func(item T) bool) {
+	iterators.RangeCol(s, yield)
 }

@@ -2,7 +2,6 @@ package test_util
 
 import (
 	"fmt"
-	"math/rand/v2"
 
 	"github.com/daanv2/go-cache/pkg/constraints"
 	"github.com/daanv2/go-cache/pkg/hash"
@@ -37,13 +36,6 @@ func Generate(amount int) []*TestItem {
 	return items
 }
 
-func Shuffle(items []*TestItem) {
-	rand.Shuffle(len(items), func(i, j int) {
-		old := items[j]
-		items[j] = items[i]
-		items[j] = old
-	})
-}
 
 var _ hash.Hasher[*TestItem] = &TestItemHasher{}
 

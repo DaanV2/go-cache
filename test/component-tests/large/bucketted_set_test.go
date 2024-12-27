@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/daanv2/go-cache/collections"
 	"github.com/daanv2/go-cache/large"
 	test_util "github.com/daanv2/go-cache/test/util"
 	"github.com/stretchr/testify/require"
@@ -18,7 +19,7 @@ func Test_BuckettedSet(t *testing.T) {
 			require.NoError(t, err)
 
 			items := test_util.Generate(int(size))
-			test_util.Shuffle(items)
+			collections.Shuffle(items)
 
 			for _, item := range items {
 				v, ok := col.GetOrAdd(item)
@@ -38,7 +39,7 @@ func Test_BuckettedSet_Concurrency(t *testing.T) {
 			require.NoError(t, err)
 
 			items := test_util.Generate(int(size))
-			test_util.Shuffle(items)
+			collections.Shuffle(items)
 
 			splitWithOverlap(col, items)
 			check := make(map[int]int, size)
@@ -61,7 +62,7 @@ func Benchmark_BuckettedSet_Concurrency(t *testing.B) {
 				require.NoError(t, err)
 
 				items := test_util.Generate(int(size))
-				test_util.Shuffle(items)
+				collections.Shuffle(items)
 
 				splitWithOverlap(col, items)
 				check := make(map[int]int, size)
