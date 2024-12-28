@@ -50,3 +50,23 @@ func (m *BuckettedMap[K, V]) Set(key K, item V) bool {
 	bucket := m.bucketIndex(setitem)
 	return m.sets[bucket].updateOrAdd(setitem)
 }
+
+// Append adds all items from the specified Rangeable to the BuckettedMap.
+func (m *BuckettedMap[K, V]) Append(other collections.Rangeable[collections.KeyValue[K, V]]) {
+	other.Range(func(item collections.KeyValue[K, V]) bool {
+		m.Set(item.Key(), item.Value())
+		return true
+	})
+}
+
+// AppendParralel adds all items from the specified ParralelRangeable to the BuckettedMap.
+func (m *BuckettedMap[K, V]) AppendParralel(other collections.ParralelRangeable[collections.KeyValue[K, V]]) {
+	other.RangeParralel(func(item collections.KeyValue[K, V]) bool {
+		m.Set(item.Key(), item.Value())
+		return true
+	})
+}
+
+func (m *BuckettedMap[K, V]) Grow(new_capacity uint64) {
+	m.BuckettedSet.Grow(new_capacity)
+}

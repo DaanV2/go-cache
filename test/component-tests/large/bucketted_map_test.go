@@ -45,6 +45,37 @@ func Test_BuckettedMap(t *testing.T) {
 	}
 }
 
+func Test_BuckettedMap_Grow(t *testing.T) {
+	sizes := []uint64{100, 200, 300, 400, 1000, 10000, 20000}
+
+	for _, size := range sizes {
+		t.Run(fmt.Sprintf("Concurrency(%v)", size), func(t *testing.T) {
+			col, err := large.NewBuckettedMap[int, string](size*10, hash.IntegerHasher[int](hash.MD5))
+			require.NoError(t, err)
+
+			items := test_util.Generate(int(size))
+			collections.Shuffle(items)
+
+			for _, item := range items {
+				ok := col.Set(item.ID, item.Data)
+				require.True(t, ok)
+
+				v, ok := col.Get(item.ID)
+				require.True(t, ok)
+				require.Equal(t, v.Value(), item.Data)
+			}
+
+			col.Grow(size * 2)
+
+			for _, item := range items {
+				v, ok := col.Get(item.ID)
+				require.True(t, ok)
+				require.Equal(t, v.Value(), item.Data)
+			}
+		})
+	}
+}
+
 func Test_BuckettedMap_Concurrency(t *testing.T) {
 	sizes := []uint64{100, 200, 300, 400, 1000, 10000, 20000}
 	target := []cpu.CacheKind{cpu.CacheL1, cpu.CacheL2, cpu.CacheL3}
