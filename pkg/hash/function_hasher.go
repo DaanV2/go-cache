@@ -10,7 +10,7 @@ type FunctionHasher[T any] struct {
 // Hash implements Hasher.
 func (f *FunctionHasher[T]) Hash(item T) uint64 {
 	builder := f.builder()
-	builder.Write(f.toBytes(item))
+	_ = builder.Write(f.toBytes(item))
 	return builder.Sum()
 }
 
