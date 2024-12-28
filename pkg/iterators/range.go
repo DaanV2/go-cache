@@ -25,7 +25,7 @@ func RangeColParralel[C Collection[T], T any](colls []C, yield func(item T) bool
 	// This can be done unsafely, its faster. but the only state being written to it, is false
 	// This means go rountines might go an extra couple of loops before exiting, but it doesn't block as much per item
 	continu := new(bool)
-	*continu = false
+	*continu = true
 
 	for _, col := range colls {
 		wg.Add(1)
