@@ -1,4 +1,6 @@
 *.o
 *.exe
+*.S
+*.pprof
 
 reports/coverage.out

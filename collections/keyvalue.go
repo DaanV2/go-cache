@@ -6,8 +6,6 @@ import (
 )
 
 // KeyValue is a generic struct that holds a key-value pair.
-// K is the type of the key, which must be comparable.
-// V is the type of the value, which can be any type.
 type KeyValue[K comparable, V any] struct {
 	key   K
 	value V

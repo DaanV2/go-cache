@@ -1,4 +1,4 @@
-package growable_tests
+package large_test
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ func Test_GrowableSet(t *testing.T) {
 	sizes := []int{100, 200, 300, 400, 1000, 10000, 20000}
 
 	for _, size := range sizes {
-		t.Run(fmt.Sprintf("Concurrenty(%v)", size), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Concurrency(%v)", size), func(t *testing.T) {
 			col, err := large.NewGrowableSet[*test_util.TestItem](test_util.Hasher())
 			require.NoError(t, err)
 
@@ -34,7 +34,7 @@ func Test_GrowableSet_Concurrency(t *testing.T) {
 	sizes := []int{100, 200, 300, 400, 1000, 10000, 20000}
 
 	for _, size := range sizes {
-		t.Run(fmt.Sprintf("Concurrenty(%v)", size), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Concurrency(%v)", size), func(t *testing.T) {
 			col, err := large.NewGrowableSet[*test_util.TestItem](test_util.Hasher())
 			require.NoError(t, err)
 
@@ -56,7 +56,7 @@ func Benchmark_GrowableSet_Concurrency(t *testing.B) {
 	sizes := []int{100, 200, 300, 400, 1000, 10000, 20000}
 
 	for _, size := range sizes {
-		t.Run(fmt.Sprintf("Concurrenty(%v)", size), func(t *testing.B) {
+		t.Run(fmt.Sprintf("Concurrency(%v)", size), func(t *testing.B) {
 			for i := 0; i < t.N; i++ {
 				col, err := large.NewGrowableSet[*test_util.TestItem](test_util.Hasher())
 				require.NoError(t, err)

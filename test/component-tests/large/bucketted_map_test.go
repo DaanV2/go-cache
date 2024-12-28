@@ -1,4 +1,4 @@
-package growable_tests
+package large_test
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ func Test_BuckettedMap(t *testing.T) {
 	sizes := []uint64{100, 200, 300, 400, 1000, 10000, 20000}
 
 	for _, size := range sizes {
-		t.Run(fmt.Sprintf("Concurrenty(%v)", size), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Concurrency(%v)", size), func(t *testing.T) {
 			col, err := large.NewBuckettedMap[int, string](size*10, hash.IntegerHasher[int](hash.MD5))
 			require.NoError(t, err)
 
@@ -50,7 +50,7 @@ func Test_BuckettedMap_Concurrency(t *testing.T) {
 	target := []cpu.CacheKind{cpu.CacheL1, cpu.CacheL2, cpu.CacheL3}
 
 	test_util.Case2(sizes, target, func(size uint64, cache cpu.CacheKind) {
-		t.Run(fmt.Sprintf("Concurrenty(%v)->%s", size, cache), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Concurrency(%v)->%s", size, cache), func(t *testing.T) {
 			col, err := large.NewBuckettedMap[int, string](
 				size*10,
 				 hash.IntegerHasher[int](hash.MD5),
@@ -80,7 +80,7 @@ func Benchmark_BuckettedMap_Concurrency(t *testing.B) {
 	target := []cpu.CacheKind{cpu.CacheL1, cpu.CacheL2, cpu.CacheL3}
 
 	test_util.Case2(sizes, target, func(size uint64, cache cpu.CacheKind) {
-		t.Run(fmt.Sprintf("Concurrenty(%v)->%s", size, cache), func(t *testing.B) {
+		t.Run(fmt.Sprintf("Concurrency(%v)->%s", size, cache), func(t *testing.B) {
 			t.ReportMetric(float64(size), "size")
 			t.ReportMetric(float64(cache)+1, "target")
 

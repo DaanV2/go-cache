@@ -48,16 +48,19 @@ func (s *BuckettedSet[T]) GetOrAdd(item T) (T, bool) {
 	return s.sets[bucket].getOrAdd(setitem)
 }
 
+// UpdateOrAdd will update the item if it exists, otherwise it will add the item to the set, and return true if it had to add it
 func (s *BuckettedSet[T]) UpdateOrAdd(item T) bool {
 	setitem := NewSetItem[T](item, s.hasher.Hash(item))
 	bucket := s.bucketIndex(setitem)
 	return s.sets[bucket].updateOrAdd(setitem)
 }
 
+// bucketIndex returns the index of the bucket that the item should be placed in
 func (s *BuckettedSet[T]) bucketIndex(item SetItem[T]) uint64 {
 	return item.hash % uint64(len(s.sets))
 }
 
+// Read will return a sequence of all items in the set
 func (s *BuckettedSet[T]) Read() iter.Seq[T] {
 	return func(yield func(T) bool) {
 		for _, b := range s.sets {
@@ -70,10 +73,12 @@ func (s *BuckettedSet[T]) Read() iter.Seq[T] {
 	}
 }
 
+// Range will iterate over all items in the set
 func (s *BuckettedSet[T]) Range(yield func(item T) bool) {
 	iterators.RangeCol(s, yield)
 }
 
+// RangeParralel will iterate over all items in the set in parallel
 func (s *BuckettedSet[T]) RangeParralel(yield func(item T) bool) {
 	iterators.RangeColParralel(s.sets, yield)
 }

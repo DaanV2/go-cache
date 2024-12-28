@@ -3,37 +3,23 @@ package large
 import (
 	"errors"
 	"iter"
-	"sync"
 
 	"github.com/daanv2/go-cache/fixed"
 	"github.com/daanv2/go-cache/pkg/constraints"
 	"github.com/daanv2/go-cache/pkg/hash"
 	"github.com/daanv2/go-cache/pkg/iterators"
 	"github.com/daanv2/go-cache/pkg/options"
-	"github.com/daanv2/go-locks"
-	optimal "github.com/daanv2/go-optimal"
 )
 
-type SetBase struct {
-	bucket_size int
-	bucket_lock *sync.RWMutex
-	items_lock  *locks.Pool
-}
-
-func NewSetBase[T any]() SetBase {
-	return SetBase{
-		bucket_size: optimal.SliceSize[T](),
-		bucket_lock: &sync.RWMutex{},
-		items_lock:  locks.NewPool(),
-	}
-}
-
+// GrowableSet is a set that grows as needed.
 type GrowableSet[T constraints.Equivalent[T]] struct {
 	SetBase
 	hasher  hash.Hasher[T]
 	buckets []*fixed.Slice[SetItem[T]]
 }
 
+// NewGrowableSet creates a new instance of GrowableSet with the provided hasher and options.
+// The hasher is used to hash the elements in the set, and options can be used to configure the set.
 func NewGrowableSet[T constraints.Equivalent[T]](hasher hash.Hasher[T], opts ...options.Option[SetBase]) (*GrowableSet[T], error) {
 	base := NewSetBase[T]()
 	err := options.Apply(&base, opts...)
@@ -58,12 +44,14 @@ func NewGrowableSet[T constraints.Equivalent[T]](hasher hash.Hasher[T], opts ...
 	return set, err
 }
 
+// GetOrAdd returns the item if it exists in the set, otherwise it adds it and returns it.
 func (s *GrowableSet[T]) GetOrAdd(item T) (T, bool) {
 	setitem := NewSetItem[T](item, s.hasher.Hash(item))
 
 	return s.getOrAdd(setitem)
 }
 
+// UpdateOrAdd updates the item if it exists in the set, otherwise it adds it. Returns true if it had to add it instead of update.
 func (s *GrowableSet[T]) UpdateOrAdd(item T) bool {
 	setitem := NewSetItem[T](item, s.hasher.Hash(item))
 
@@ -109,9 +97,7 @@ func (s *GrowableSet[T]) find(item SetItem[T]) (SetItem[T], bool) {
 
 	// Try to find it
 	for i := range s.buckets {
-		v, ok := s.buckets[i].Find(func(v SetItem[T]) bool {
-			return v.Equals(item)
-		})
+		v, ok := s.buckets[i].Find(item.Equals)
 		if ok {
 			return v, true
 		}
@@ -126,9 +112,7 @@ func (s *GrowableSet[T]) updateIf(item SetItem[T]) bool {
 
 	// Try to find it
 	for i := range s.buckets {
-		index, ok := s.buckets[i].FindIndex(func(v SetItem[T]) bool {
-			return v.Equals(item)
-		})
+		index, ok := s.buckets[i].FindIndex(item.Equals)
 		if ok {
 			_ = s.buckets[i].Set(index, item)
 			return true
@@ -160,6 +144,7 @@ func (s *GrowableSet[T]) set(item SetItem[T]) {
 	}
 }
 
+// Read returns an iterator that reads the items in the set.
 func (s *GrowableSet[T]) Read() iter.Seq[T] {
 	return func(yield func(T) bool) {
 		s.bucket_lock.RLock()
@@ -175,6 +160,7 @@ func (s *GrowableSet[T]) Read() iter.Seq[T] {
 	}
 }
 
+// Range calls the yield function for each item in the set.
 func (s *GrowableSet[T]) Range(yield func(item T) bool) {
 	iterators.RangeCol(s, yield)
 }

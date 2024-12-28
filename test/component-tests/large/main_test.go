@@ -1,4 +1,4 @@
-package growable_tests
+package large_test
 
 import (
 	"runtime"

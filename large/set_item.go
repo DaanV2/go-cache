@@ -23,5 +23,6 @@ func (s *SetItem[T]) Hash() uint64 {
 }
 
 func (s *SetItem[T]) Equals(other SetItem[T]) bool {
-	return s.hash == other.hash && s.item.Equals(other.item)
+	return s.hash == other.hash &&
+		s.item.Equals(other.item)
 }
