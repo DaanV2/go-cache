@@ -4,6 +4,10 @@
 
 [WIP] some sets / maps usable for large amount of storage of items concurrently.
 
+```bash
+go get github.com/daanv2/go-cache
+```
+
 ```go
 col, err := large.NewBuckettedSet[*test_util.TestItem](size*10, test_util.Hasher())
 require.NoError(t, err)
