@@ -97,7 +97,7 @@ func (s *GrowableSet[T]) find(item SetItem[T]) (SetItem[T], bool) {
 
 	// Try to find it
 	for i := range s.buckets {
-		v, ok := s.buckets[i].Find(item.Equals)
+		v, ok := s.buckets[i].Find(item.Equal)
 		if ok {
 			return v, true
 		}
@@ -112,7 +112,7 @@ func (s *GrowableSet[T]) updateIf(item SetItem[T]) bool {
 
 	// Try to find it
 	for i := range s.buckets {
-		index, ok := s.buckets[i].FindIndex(item.Equals)
+		index, ok := s.buckets[i].FindIndex(item.Equal)
 		if ok {
 			_ = s.buckets[i].Set(index, item)
 			return true
