@@ -14,8 +14,8 @@ type TestItem struct {
 	Data string
 }
 
-// Equals implements constraints.Equivalent.
-func (t *TestItem) Equals(other *TestItem) bool {
+// Equal implements constraints.Equivalent.
+func (t *TestItem) Equal(other *TestItem) bool {
 	return t.ID == other.ID
 }
 

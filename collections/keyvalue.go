@@ -34,8 +34,8 @@ func (kv KeyValue[K, V]) Value() V {
 	return kv.value
 }
 
-// Equals checks if the key of the current KeyValue pair is equal to the key of another KeyValue pair.
-func (kv KeyValue[K, V]) Equals(other KeyValue[K, V]) bool {
+// Equal checks if the key of the current KeyValue pair is equal to the key of another KeyValue pair.
+func (kv KeyValue[K, V]) Equal(other KeyValue[K, V]) bool {
 	return kv.key == other.key
 }
 

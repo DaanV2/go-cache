@@ -5,5 +5,5 @@ type Comparable[T any] interface {
 }
 
 type Equivalent[T any] interface {
-	Equals(other T) bool
+	Equal(other T) bool
 }
