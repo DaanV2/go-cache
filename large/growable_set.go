@@ -2,6 +2,7 @@ package large
 
 import (
 	"errors"
+	"fmt"
 	"iter"
 
 	"github.com/daanv2/go-cache/fixed"
@@ -9,6 +10,7 @@ import (
 	"github.com/daanv2/go-cache/pkg/hash"
 	"github.com/daanv2/go-cache/pkg/iterators"
 	"github.com/daanv2/go-cache/pkg/options"
+	"github.com/daanv2/go-kit/generics"
 )
 
 // GrowableSet is a set that grows as needed.
@@ -163,4 +165,12 @@ func (s *GrowableSet[T]) Read() iter.Seq[T] {
 // Range calls the yield function for each item in the set.
 func (s *GrowableSet[T]) Range(yield func(item T) bool) {
 	iterators.RangeCol(s, yield)
+}
+
+func (s *GrowableSet[T]) String() string {
+	return fmt.Sprintf("large.GrowableSet[%s,%v]", generics.NameOf[T](), len(s.buckets))
+}
+
+func (s *GrowableSet[T]) GoString() string {
+	return s.String()
 }

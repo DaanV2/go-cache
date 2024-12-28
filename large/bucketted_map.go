@@ -1,6 +1,8 @@
 package large
 
 import (
+	"fmt"
+
 	"github.com/daanv2/go-cache/collections"
 	"github.com/daanv2/go-cache/pkg/hash"
 	"github.com/daanv2/go-cache/pkg/options"
@@ -69,4 +71,12 @@ func (m *BuckettedMap[K, V]) AppendParralel(other collections.ParralelRangeable[
 
 func (m *BuckettedMap[K, V]) Grow(new_capacity uint64) {
 	m.BuckettedSet.Grow(new_capacity)
+}
+
+func (s *BuckettedMap[K, V]) String() string {
+	return fmt.Sprintf("large.BuckettedMap[%s,%s]", generics.NameOf[K](), generics.NameOf[V]())
+}
+
+func (s *BuckettedMap[K, V]) GoString() string {
+	return s.String()
 }

@@ -1,6 +1,7 @@
 package large
 
 import (
+	"fmt"
 	"iter"
 	"runtime"
 	"sync"
@@ -9,6 +10,7 @@ import (
 	"github.com/daanv2/go-cache/pkg/hash"
 	"github.com/daanv2/go-cache/pkg/iterators"
 	"github.com/daanv2/go-cache/pkg/options"
+	"github.com/daanv2/go-kit/generics"
 )
 
 // BuckettedSet is a set of items, that uses a pre-defined amount of buckets, each item generates an hash, from which a bucket can be specified
@@ -91,6 +93,14 @@ func (s *BuckettedSet[T]) RangeParralel(yield func(item T) bool) {
 	iterators.RangeColParralel(s.sets, yield)
 }
 
+func (s *BuckettedSet[T]) String() string {
+	return fmt.Sprintf("large.BuckettedSet[%s]", generics.NameOf[T]())
+}
+
+func (s *BuckettedSet[T]) GoString() string {
+	return s.String()
+}
+
 // Grow will increase the capacity of the set
 func (m *BuckettedSet[T]) Grow(new_capacity uint64) {
 	buckets := setBuckets(new_capacity, m.base)
@@ -138,7 +148,7 @@ func (m *BuckettedSet[T]) Grow(new_capacity uint64) {
 	wg.Wait()
 }
 
-func workerGrow[T constraints.Equivalent[T]](wg *sync.WaitGroup, process <- chan *GrowableSet[T], receiver *BuckettedSet[T]) {
+func workerGrow[T constraints.Equivalent[T]](wg *sync.WaitGroup, process <-chan *GrowableSet[T], receiver *BuckettedSet[T]) {
 	defer wg.Done()
 	for s := range process {
 		s.Range(func(item T) bool {

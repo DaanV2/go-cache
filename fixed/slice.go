@@ -1,6 +1,7 @@
 package fixed
 
 import (
+	"fmt"
 	"iter"
 	"sync"
 
@@ -206,4 +207,15 @@ func (s *Slice[T]) Read() iter.Seq[T] {
 			}
 		}
 	}
+}
+
+func (s *Slice[T]) String() string {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	return fmt.Sprintf("fixed.Slice[%s,%d/%d]", generics.NameOf[T](), len(s.items), cap(s.items))
+}
+
+func (s *Slice[T]) GoString() string {
+	return s.String()
 }
