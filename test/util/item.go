@@ -36,7 +36,6 @@ func Generate(amount int) []*TestItem {
 	return items
 }
 
-
 var _ hash.Hasher[*TestItem] = &TestItemHasher{}
 
 type TestItemHasher struct{}

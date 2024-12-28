@@ -12,10 +12,12 @@ type BuckettedMap[K comparable, V any] struct {
 	BuckettedSet[collections.KeyValue[K, V]]
 }
 
-func NewBuckettedMap[K comparable, V any](cap uint64, hasher hash.Hasher[K], opts ...options.Option[SetBase]) (*BuckettedMap[K, V], error) {
+// NewBuckettedMap creates a new BuckettedMap with the specified capacity, hasher, and options.
+// The BuckettedMap is a concurrent map that uses a bucketing strategy to reduce contention.
+func NewBuckettedMap[K comparable, V any](capacity uint64, keyhasher hash.Hasher[K], opts ...options.Option[SetBase]) (*BuckettedMap[K, V], error) {
 	set, err := NewBuckettedSet[collections.KeyValue[K, V]](
-		cap,
-		collections.KeyValueHasher[K, V](hasher),
+		capacity,
+		collections.KeyValueHasher[K, V](keyhasher),
 		opts...,
 	)
 
@@ -28,6 +30,7 @@ func NewBuckettedMap[K comparable, V any](cap uint64, hasher hash.Hasher[K], opt
 	}, nil
 }
 
+// Get retrieves the value for the specified key from the BuckettedMap.
 func (m *BuckettedMap[K, V]) Get(key K) (collections.KeyValue[K, V], bool) {
 	kv := collections.NewKeyValue(key, generics.Empty[V]())
 	setitem := NewSetItem(kv, m.hasher.Hash(kv))
@@ -40,7 +43,7 @@ func (m *BuckettedMap[K, V]) Get(key K) (collections.KeyValue[K, V], bool) {
 	return collections.EmptyKeyValue[K, V](), false
 }
 
-// Set, TODO, returns true if added, false is something got updated
+// Set will add or update the value for the specified key in the BuckettedMap. It returns true if the value was added, false if it was updated.
 func (m *BuckettedMap[K, V]) Set(key K, item V) bool {
 	kv := collections.NewKeyValue(key, item)
 	setitem := NewSetItem(kv, m.hasher.Hash(kv))

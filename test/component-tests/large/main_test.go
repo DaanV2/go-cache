@@ -7,7 +7,6 @@ import (
 	"github.com/daanv2/go-cache/collections"
 )
 
-
 func splitWithOverlap[T any](set collections.Set[T], items []T) {
 	l := len(items)
 	sections := l / max(runtime.GOMAXPROCS(0)*10, 10)

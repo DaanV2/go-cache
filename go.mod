@@ -5,7 +5,7 @@ go 1.23.4
 require (
 	github.com/daanv2/go-kit v1.0.3
 	github.com/daanv2/go-locks v1.3.0
-	github.com/daanv2/go-optimal v1.1.2
+	github.com/daanv2/go-optimal v1.2.4
 	github.com/stretchr/testify v1.10.0
 )
 

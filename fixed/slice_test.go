@@ -71,8 +71,9 @@ func Test_Slice_Parralel(t *testing.T) {
 
 	wg.Wait()
 	close(adds)
-	<- done
+	<-done
 
+	require.True(t, col.IsFull())
 	require.EqualValues(t, col.Cap(), 90)
 	require.EqualValues(t, col.Len(), 90)
 	require.EqualValues(t, total.Load(), 90)

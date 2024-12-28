@@ -15,14 +15,15 @@ type BuckettedSet[T constraints.Equivalent[T]] struct {
 	sets   []*GrowableSet[T]
 }
 
-func NewBuckettedSet[T constraints.Equivalent[T]](cap uint64, hasher hash.Hasher[T], opts ...options.Option[SetBase]) (*BuckettedSet[T], error) {
+// NewBuckettedSet creates a new BuckettedSet with the specified capacity, hasher, and options.
+func NewBuckettedSet[T constraints.Equivalent[T]](capacity uint64, hasher hash.Hasher[T], opts ...options.Option[SetBase]) (*BuckettedSet[T], error) {
 	base := NewSetBase[T]()
 	err := options.Apply(&base, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	buckets := max(cap/(uint64(base.bucket_size)*4), 10)
+	buckets := max(capacity/(uint64(base.bucket_size)*4), 10)
 	set := &BuckettedSet[T]{
 		hasher: hasher,
 		sets:   make([]*GrowableSet[T], 0, buckets),
@@ -40,6 +41,7 @@ func NewBuckettedSet[T constraints.Equivalent[T]](cap uint64, hasher hash.Hasher
 	return set, nil
 }
 
+// GetOrAdd will return the item if it exists, otherwise it will add the item to the set
 func (s *BuckettedSet[T]) GetOrAdd(item T) (T, bool) {
 	setitem := NewSetItem[T](item, s.hasher.Hash(item))
 	bucket := s.bucketIndex(setitem)

@@ -6,10 +6,8 @@ import (
 	"github.com/daanv2/go-cache/pkg/hash"
 )
 
-
-
 func Benchmark_Strings(b *testing.B) {
-	strs := []string {
+	strs := []string{
 		"57dd5c23-677f-47d5-9277-298bef455ae1",
 		"6565dcd5-96b9-4666-812f-a51201d69e84",
 		"9b019c3b-07db-4f30-806a-5d2a25ade872",
