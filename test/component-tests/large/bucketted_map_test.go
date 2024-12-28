@@ -84,9 +84,9 @@ func Test_BuckettedMap_Concurrency(t *testing.T) {
 		t.Run(fmt.Sprintf("Concurrency(%v)->%s", size, cache), func(t *testing.T) {
 			col, err := large.NewBuckettedMap[int, string](
 				size*10,
-				 hash.IntegerHasher[int](hash.MD5),
-				  large.WithCacheTarget[collections.KeyValue[int, string]](cache),
-				)
+				hash.IntegerHasher[int](hash.MD5),
+				large.WithCacheTarget[collections.KeyValue[int, string]](cache),
+			)
 			require.NoError(t, err)
 
 			items := make([]collections.KeyValue[int, string], 0, int(size))
@@ -118,9 +118,9 @@ func Benchmark_BuckettedMap_Concurrency(t *testing.B) {
 			for i := 0; i < t.N; i++ {
 				col, err := large.NewBuckettedMap[int, string](
 					size*10,
-					 hash.IntegerHasher[int](hash.MD5),
-					  large.WithCacheTarget[collections.KeyValue[int, string]](cache),
-					)
+					hash.IntegerHasher[int](hash.MD5),
+					large.WithCacheTarget[collections.KeyValue[int, string]](cache),
+				)
 				require.NoError(t, err)
 
 				items := make([]collections.KeyValue[int, string], 0, int(size))
@@ -132,5 +132,36 @@ func Benchmark_BuckettedMap_Concurrency(t *testing.B) {
 				splitWithOverlap(col, items)
 			}
 		})
+	})
+}
+
+func Test_BuckettedMap_Debug(t *testing.T) {
+	size := 20000
+
+	t.Run(fmt.Sprintf("Concurrency(%v)", size), func(t *testing.T) {
+		col, err := large.NewBuckettedMap[int, string](1, test_util.CheapIntHasher[int]())
+		require.NoError(t, err)
+
+		items := test_util.Generate(int(size))
+		collections.Shuffle(items)
+
+		for _, item := range items {
+			ok := col.Set(item.ID, item.Data)
+			require.True(t, ok)
+
+			v, ok := col.Get(item.ID)
+			require.True(t, ok)
+			require.Equal(t, v.Value(), item.Data)
+		}
+
+		for _, item := range items {
+			data := item.Data + "updated"
+			ok := col.Set(item.ID, data)
+			require.False(t, ok)
+
+			v, ok := col.Get(item.ID)
+			require.True(t, ok)
+			require.Equal(t, v.Value(), data)
+		}
 	})
 }

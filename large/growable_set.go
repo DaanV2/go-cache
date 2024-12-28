@@ -129,7 +129,7 @@ func (s *GrowableSet[T]) set(item SetItem[T]) {
 	defer s.bucket_lock.Unlock()
 
 	l := len(s.buckets)
-	for i := l - 1; i > 0; i-- {
+	for i := l - 1; i >= 0; i-- {
 		if !s.buckets[i].IsFull() {
 			if s.buckets[i].TryAppend(item) > 0 {
 				return
