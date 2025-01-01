@@ -40,7 +40,7 @@ func (o Options) BucketAmount(capacity uint64) uint64 {
 
 	amount := (capacity/uint64(max(o.bucket_size, 1))) * 4
 
-	return amount
+	return max(amount, 10)
 }
 
 // WithBucketSize sets the size of buckets that the set will use

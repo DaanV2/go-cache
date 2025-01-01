@@ -28,8 +28,8 @@ func NewBuckettedSet[T constraints.Equivalent[T]](capacity uint64, hasher hash.H
 	}
 
 	buckets := base.bucket_amount
-	if buckets <= 1 {
-		buckets = base.bucket_amount_fn(capacity)
+	if buckets == 0 {
+		buckets = base.BucketAmount(capacity)
 	}
 
 	set := &BuckettedSet[T]{
@@ -106,7 +106,7 @@ func (s *BuckettedSet[T]) GoString() string {
 
 // Grow will increase the capacity of the set
 func (m *BuckettedSet[T]) Grow(new_capacity uint64) {
-	buckets := m.base.bucket_amount_fn(new_capacity)
+	buckets := m.base.BucketAmount(new_capacity)
 	current := uint64(len(m.sets))
 	if current >= buckets {
 		return
