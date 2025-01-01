@@ -17,18 +17,21 @@ import (
 type BuckettedSet[T constraints.Equivalent[T]] struct {
 	hasher hash.Hasher[T]
 	sets   []*GrowableSet[T]
-	base   SetBase
+	base   Options
 }
 
 // NewBuckettedSet creates a new BuckettedSet with the specified capacity, hasher, and options.
-func NewBuckettedSet[T constraints.Equivalent[T]](capacity uint64, hasher hash.Hasher[T], opts ...options.Option[SetBase]) (*BuckettedSet[T], error) {
-	base := NewSetBase[T]()
-	err := options.Apply(&base, opts...)
+func NewBuckettedSet[T constraints.Equivalent[T]](capacity uint64, hasher hash.Hasher[T], opts ...options.Option[Options]) (*BuckettedSet[T], error) {
+	base, err := CreateOptions[T](opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	buckets := setBuckets(capacity, base)
+	buckets := base.bucket_amount
+	if buckets <= 1 {
+		buckets = base.bucket_amount_fn(capacity)
+	}
+
 	set := &BuckettedSet[T]{
 		hasher: hasher,
 		sets:   make([]*GrowableSet[T], 0, buckets),
@@ -36,7 +39,7 @@ func NewBuckettedSet[T constraints.Equivalent[T]](capacity uint64, hasher hash.H
 	}
 
 	for range buckets {
-		s, err := NewGrowableSet(hasher, opts...)
+		s, err := NewGrowableSetFrom(hasher, base)
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +106,7 @@ func (s *BuckettedSet[T]) GoString() string {
 
 // Grow will increase the capacity of the set
 func (m *BuckettedSet[T]) Grow(new_capacity uint64) {
-	buckets := setBuckets(new_capacity, m.base)
+	buckets := m.base.bucket_amount_fn(new_capacity)
 	current := uint64(len(m.sets))
 	if current >= buckets {
 		return
@@ -156,9 +159,4 @@ func workerGrow[T constraints.Equivalent[T]](wg *sync.WaitGroup, process <-chan 
 			return true
 		})
 	}
-}
-
-// setBuckets will calculate the amount of buckets that should be used
-func setBuckets(capacity uint64, base SetBase) uint64 {
-	return max(capacity/(uint64(base.bucket_size)*4), 10)
 }

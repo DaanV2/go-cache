@@ -15,20 +15,23 @@ import (
 
 // GrowableSet is a set that grows as needed.
 type GrowableSet[T constraints.Equivalent[T]] struct {
-	SetBase
+	Options
 	hasher  hash.Hasher[T]
 	buckets []*fixed.Slice[SetItem[T]]
 }
 
 // NewGrowableSet creates a new instance of GrowableSet with the provided hasher and options.
 // The hasher is used to hash the elements in the set, and options can be used to configure the set.
-func NewGrowableSet[T constraints.Equivalent[T]](hasher hash.Hasher[T], opts ...options.Option[SetBase]) (*GrowableSet[T], error) {
-	base := NewSetBase[T]()
-	err := options.Apply(&base, opts...)
+func NewGrowableSet[T constraints.Equivalent[T]](hasher hash.Hasher[T], opts ...options.Option[Options]) (*GrowableSet[T], error) {
+	base, err := CreateOptions[T](opts...)
 	if err != nil {
 		return nil, err
 	}
 
+	return NewGrowableSetFrom(hasher, base)
+}
+
+func NewGrowableSetFrom[T constraints.Equivalent[T]](hasher hash.Hasher[T], base Options) (*GrowableSet[T], error) {
 	// Validate
 	if hasher == nil {
 		return nil, errors.New("hasher is nil")
@@ -37,13 +40,11 @@ func NewGrowableSet[T constraints.Equivalent[T]](hasher hash.Hasher[T], opts ...
 		return nil, errors.New("bucket size is too small <= 1")
 	}
 
-	set := &GrowableSet[T]{
-		SetBase: base,
+	return &GrowableSet[T]{
+		Options: base,
 		hasher:  hasher,
 		buckets: make([]*fixed.Slice[SetItem[T]], 0),
-	}
-
-	return set, err
+	}, nil
 }
 
 // GetOrAdd returns the item if it exists in the set, otherwise it adds it and returns it.
@@ -138,7 +139,7 @@ func (s *GrowableSet[T]) set(item SetItem[T]) {
 	}
 
 	for {
-		b := fixed.NewSlice[SetItem[T]](s.SetBase.bucket_size)
+		b := fixed.NewSlice[SetItem[T]](s.Options.bucket_size)
 		s.buckets = append(s.buckets, &b)
 		if s.buckets[len(s.buckets)-1].TryAppend(item) > 0 {
 			return

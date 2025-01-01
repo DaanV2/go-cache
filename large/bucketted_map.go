@@ -16,7 +16,7 @@ type BuckettedMap[K comparable, V any] struct {
 
 // NewBuckettedMap creates a new BuckettedMap with the specified capacity, hasher, and options.
 // The BuckettedMap is a concurrent map that uses a bucketing strategy to reduce contention.
-func NewBuckettedMap[K comparable, V any](capacity uint64, keyhasher hash.Hasher[K], opts ...options.Option[SetBase]) (*BuckettedMap[K, V], error) {
+func NewBuckettedMap[K comparable, V any](capacity uint64, keyhasher hash.Hasher[K], opts ...options.Option[Options]) (*BuckettedMap[K, V], error) {
 	set, err := NewBuckettedSet[collections.KeyValue[K, V]](
 		capacity,
 		collections.KeyValueHasher[K, V](keyhasher),
