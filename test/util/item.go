@@ -16,7 +16,15 @@ type TestItem struct {
 
 // Equal implements constraints.Equivalent.
 func (t *TestItem) Equal(other *TestItem) bool {
+	if t == nil || other == nil {
+		return t == other
+	}
+
 	return t.ID == other.ID
+}
+
+func (t *TestItem) String() string {
+	return fmt.Sprintf("TestItem{ID: %v, Data: %v}", t.ID, t.Data)
 }
 
 func NewItem(id int) *TestItem {

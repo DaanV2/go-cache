@@ -33,45 +33,24 @@ func Test_GrowableSet(t *testing.T) {
 func Test_GrowableSet_Concurrency(t *testing.T) {
 	sizes := []int{100, 200, 300, 400, 1000, 10000, 20000}
 
-	for _, size := range sizes {
+	test_util.Case1(sizes, func(size int) {
+		col, err := large.NewGrowableSet[*test_util.TestItem](test_util.Hasher())
+		require.NoError(t, err)
+
+		items := test_util.Generate(size)
+		collections.Shuffle(items)
+
 		t.Run(fmt.Sprintf("Concurrency(%v)", size), func(t *testing.T) {
-			col, err := large.NewGrowableSet[*test_util.TestItem](test_util.Hasher())
-			require.NoError(t, err)
-
-			items := test_util.Generate(size)
-			collections.Shuffle(items)
-
 			splitWithOverlap(col, items)
 			check := make(map[int]int, size)
 
 			for item := range col.Read() {
 				check[item.ID] = check[item.ID] + 1
-				require.LessOrEqual(t, check[item.ID], 1)
-			}
-		})
-	}
-}
-
-func Benchmark_GrowableSet_Concurrency(t *testing.B) {
-	sizes := []int{100, 200, 300, 400, 1000, 10000, 20000}
-
-	for _, size := range sizes {
-		t.Run(fmt.Sprintf("Concurrency(%v)", size), func(t *testing.B) {
-			for i := 0; i < t.N; i++ {
-				col, err := large.NewGrowableSet[*test_util.TestItem](test_util.Hasher())
-				require.NoError(t, err)
-
-				items := test_util.Generate(size)
-				collections.Shuffle(items)
-
-				splitWithOverlap(col, items)
-				check := make(map[int]int, size)
-
-				for item := range col.Read() {
-					check[item.ID] = check[item.ID] + 1
-					require.LessOrEqual(t, check[item.ID], 1)
+				if check[item.ID] > 1 {
+					t.Logf("Item %v has been added more than once", item.ID)
+					t.Fail()
 				}
 			}
 		})
-	}
+	})
 }

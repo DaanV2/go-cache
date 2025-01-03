@@ -35,9 +35,9 @@ func NewBuckettedMap[K comparable, V any](capacity uint64, keyhasher hash.Hasher
 // Get retrieves the value for the specified key from the BuckettedMap.
 func (m *BuckettedMap[K, V]) Get(key K) (collections.KeyValue[K, V], bool) {
 	kv := collections.NewKeyValue(key, generics.Empty[V]())
-	setitem := NewSetItem(kv, m.hasher.Hash(kv))
+	setitem := collections.NewHashItem(m.hasher.Hash(kv), kv)
 	bucket := m.bucketIndex(setitem)
-	v, ok := m.sets[bucket].find(setitem)
+	v, ok := m.sets[bucket].Find(setitem)
 	if ok {
 		return v.Value(), true
 	}
@@ -48,7 +48,7 @@ func (m *BuckettedMap[K, V]) Get(key K) (collections.KeyValue[K, V], bool) {
 // Set will add or update the value for the specified key in the BuckettedMap. It returns true if the value was added, false if it was updated.
 func (m *BuckettedMap[K, V]) Set(key K, item V) bool {
 	kv := collections.NewKeyValue(key, item)
-	setitem := NewSetItem(kv, m.hasher.Hash(kv))
+	setitem := collections.NewHashItem(m.hasher.Hash(kv), kv)
 	bucket := m.bucketIndex(setitem)
 	return m.sets[bucket].updateOrAdd(setitem)
 }

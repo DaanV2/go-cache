@@ -9,7 +9,7 @@ type intHasher[T constraints.Integer] struct{}
 
 // Hash implements hash.Hasher.
 func (i intHasher[T]) Hash(item T) uint64 {
-	return uint64(item)
+	return uint64(item) * 0x67452301
 }
 
 func CheapIntHasher[T constraints.Integer]() hash.Hasher[T] {

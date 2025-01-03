@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/daanv2/go-cache/collections"
 	"github.com/daanv2/go-cache/pkg/constraints"
 	"github.com/daanv2/go-cache/pkg/hash"
 	"github.com/daanv2/go-cache/pkg/iterators"
@@ -52,25 +53,25 @@ func NewBuckettedSet[T constraints.Equivalent[T]](capacity uint64, hasher hash.H
 
 // GetOrAdd will return the item if it exists, otherwise it will add the item to the set
 func (s *BuckettedSet[T]) GetOrAdd(item T) (T, bool) {
-	setitem := NewSetItem[T](item, s.hasher.Hash(item))
+	setitem := collections.NewHashItem[T](s.hasher.Hash(item), item)
 	bucket := s.bucketIndex(setitem)
 	return s.sets[bucket].getOrAdd(setitem)
 }
 
 // UpdateOrAdd will update the item if it exists, otherwise it will add the item to the set, and return true if it had to add it
 func (s *BuckettedSet[T]) UpdateOrAdd(item T) bool {
-	setitem := NewSetItem[T](item, s.hasher.Hash(item))
+	setitem := collections.NewHashItem[T](s.hasher.Hash(item), item)
 	return s.updateOrAdd(setitem)
 }
 
-func (s *BuckettedSet[T]) updateOrAdd(item SetItem[T]) bool {
+func (s *BuckettedSet[T]) updateOrAdd(item collections.HashItem[T]) bool {
 	bucket := s.bucketIndex(item)
 	return s.sets[bucket].updateOrAdd(item)
 }
 
 // bucketIndex returns the index of the bucket that the item should be placed in
-func (s *BuckettedSet[T]) bucketIndex(item SetItem[T]) uint64 {
-	return item.hash % uint64(len(s.sets))
+func (s *BuckettedSet[T]) bucketIndex(item collections.HashItem[T]) uint64 {
+	return item.Hash() % uint64(len(s.sets))
 }
 
 // Read will return a sequence of all items in the set

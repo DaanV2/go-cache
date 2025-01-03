@@ -4,26 +4,35 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"sync"
 
+	"github.com/daanv2/go-cache/collections"
 	"github.com/daanv2/go-cache/fixed"
 	"github.com/daanv2/go-cache/pkg/constraints"
 	"github.com/daanv2/go-cache/pkg/hash"
 	"github.com/daanv2/go-cache/pkg/iterators"
 	"github.com/daanv2/go-cache/pkg/options"
 	"github.com/daanv2/go-kit/generics"
+	optimal "github.com/daanv2/go-optimal"
 )
 
 // GrowableSet is a set that grows as needed.
 type GrowableSet[T constraints.Equivalent[T]] struct {
 	Options
 	hasher  hash.Hasher[T]
-	buckets []*fixed.Slice[SetItem[T]]
+	buckets []*fixed.Set[T]
+	bucket_lock sync.RWMutex
 }
 
 // NewGrowableSet creates a new instance of GrowableSet with the provided hasher and options.
 // The hasher is used to hash the elements in the set, and options can be used to configure the set.
 func NewGrowableSet[T constraints.Equivalent[T]](hasher hash.Hasher[T], opts ...options.Option[Options]) (*GrowableSet[T], error) {
-	base, err := CreateOptions[T](opts...)
+	o := []options.Option[Options]{
+		WithBucketSize(uint64(optimal.SliceSize[T]())),
+	}
+	o = append(o, opts...)
+
+	base, err := CreateOptions[T](o...)
 	if err != nil {
 		return nil, err
 	}
@@ -43,32 +52,33 @@ func NewGrowableSetFrom[T constraints.Equivalent[T]](hasher hash.Hasher[T], base
 	return &GrowableSet[T]{
 		Options: base,
 		hasher:  hasher,
-		buckets: make([]*fixed.Slice[SetItem[T]], 0),
+		buckets: make([]*fixed.Set[T], 0),
+		bucket_lock: sync.RWMutex{},
 	}, nil
 }
 
 // GetOrAdd returns the item if it exists in the set, otherwise it adds it and returns it.
 func (s *GrowableSet[T]) GetOrAdd(item T) (T, bool) {
-	setitem := NewSetItem[T](item, s.hasher.Hash(item))
+	setitem := collections.NewHashItem[T](s.hasher.Hash(item), item)
 
 	return s.getOrAdd(setitem)
 }
 
 // UpdateOrAdd updates the item if it exists in the set, otherwise it adds it. Returns true if it had to add it instead of update.
 func (s *GrowableSet[T]) UpdateOrAdd(item T) bool {
-	setitem := NewSetItem[T](item, s.hasher.Hash(item))
+	setitem := collections.NewHashItem[T](s.hasher.Hash(item), item)
 
 	return s.updateOrAdd(setitem)
 }
 
-func (s *GrowableSet[T]) getOrAdd(item SetItem[T]) (T, bool) {
-	item_lock := s.items_lock.GetLock(item.hash)
+func (s *GrowableSet[T]) getOrAdd(item collections.HashItem[T]) (T, bool) {
+	item_lock := s.items_lock.GetLock(item.Hash())
 
 	item_lock.Lock()
 	defer item_lock.Unlock()
 
 	// Find it
-	v, ok := s.find(item)
+	v, ok := s.Find(item)
 	if ok {
 		return v.Value(), false
 	}
@@ -78,8 +88,8 @@ func (s *GrowableSet[T]) getOrAdd(item SetItem[T]) (T, bool) {
 }
 
 // updateOrAdd TODO. return true if it had to add it instead of update
-func (s *GrowableSet[T]) updateOrAdd(item SetItem[T]) bool {
-	item_lock := s.items_lock.GetLock(item.hash)
+func (s *GrowableSet[T]) updateOrAdd(item collections.HashItem[T]) bool {
+	item_lock := s.items_lock.GetLock(item.Hash())
 
 	item_lock.Lock()
 	defer item_lock.Unlock()
@@ -94,13 +104,13 @@ func (s *GrowableSet[T]) updateOrAdd(item SetItem[T]) bool {
 	return true
 }
 
-func (s *GrowableSet[T]) find(item SetItem[T]) (SetItem[T], bool) {
+func (s *GrowableSet[T]) Find(item collections.HashItem[T]) (collections.HashItem[T], bool) {
 	s.bucket_lock.RLock()
 	defer s.bucket_lock.RUnlock()
 
 	// Try to find it
 	for i := range s.buckets {
-		v, ok := s.buckets[i].Find(item.Equal)
+		v, ok := s.buckets[i].Get(item)
 		if ok {
 			return v, true
 		}
@@ -109,15 +119,18 @@ func (s *GrowableSet[T]) find(item SetItem[T]) (SetItem[T], bool) {
 	return item, false
 }
 
-func (s *GrowableSet[T]) updateIf(item SetItem[T]) bool {
+func (s *GrowableSet[T]) updateIf(item collections.HashItem[T]) bool {
 	s.bucket_lock.RLock()
 	defer s.bucket_lock.RUnlock()
 
 	// Try to find it
 	for i := range s.buckets {
-		index, ok := s.buckets[i].FindIndex(item.Equal)
+		if !s.buckets[i].HasHash(item.Hash()) {
+			continue
+		}
+
+		ok := s.buckets[i].Update(item)
 		if ok {
-			_ = s.buckets[i].Set(index, item)
 			return true
 		}
 	}
@@ -125,23 +138,21 @@ func (s *GrowableSet[T]) updateIf(item SetItem[T]) bool {
 	return false
 }
 
-func (s *GrowableSet[T]) set(item SetItem[T]) {
+func (s *GrowableSet[T]) set(item collections.HashItem[T]) {
 	s.bucket_lock.Lock()
 	defer s.bucket_lock.Unlock()
 
-	l := len(s.buckets)
-	for i := l - 1; i >= 0; i-- {
-		if !s.buckets[i].IsFull() {
-			if s.buckets[i].TryAppend(item) > 0 {
-				return
-			}
+	l := len(s.buckets) - 1
+	if l >= 0 {
+		if s.buckets[l].Set(item) {
+			return
 		}
 	}
 
 	for {
-		b := fixed.NewSlice[SetItem[T]](s.Options.bucket_size)
+		b := fixed.NewSet[T](s.Options.bucket_size)
 		s.buckets = append(s.buckets, &b)
-		if s.buckets[len(s.buckets)-1].TryAppend(item) > 0 {
+		if s.buckets[len(s.buckets)-1].Set(item) {
 			return
 		}
 	}

@@ -1,5 +1,11 @@
 package test_util
 
+func Case1[A any](aCol []A, callback func(a A)) {
+	for _, a := range aCol {
+		callback(a)
+	}
+}
+
 func Case2[A, B any](aCol []A, bCol []B, callback func(a A, b B)) {
 	for _, a := range aCol {
 		for _, b := range bCol {
