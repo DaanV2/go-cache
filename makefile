@@ -9,7 +9,7 @@ show-coverage-report: test
 	go tool cover -html=reports/coverage.out
 
 benchmark:
-	go test -benchmem -run=^$$ -bench . ./test/component-tests/large --cpuprofile ./reports/benchmark-cpu.pprof --memprofile ./reports/benchmark-mem.pprof -blockprofile ./reports/benchmark-block.pprof
+	go test -benchmem -run=^$$ -bench . ./test/benchmarks/large --cpuprofile ./reports/benchmark-cpu.pprof --memprofile ./reports/benchmark-mem.pprof -blockprofile ./reports/benchmark-block.pprof
 
 pprof:
 	go tool pprof --http=:8080 ./reports/benchmark-cpu.pprof
