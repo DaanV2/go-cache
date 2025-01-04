@@ -10,13 +10,13 @@ import (
 )
 
 // BuckettedSet is a set of items, that uses a pre-defined amount of buckets, each item generates an hash, from which a bucket can be specified
-type BuckettedMap[K comparable, V any] struct {
+type BuckettedMap[K, V comparable] struct {
 	BuckettedSet[collections.KeyValue[K, V]]
 }
 
 // NewBuckettedMap creates a new BuckettedMap with the specified capacity, hasher, and options.
 // The BuckettedMap is a concurrent map that uses a bucketing strategy to reduce contention.
-func NewBuckettedMap[K comparable, V any](capacity uint64, keyhasher hash.Hasher[K], opts ...options.Option[Options]) (*BuckettedMap[K, V], error) {
+func NewBuckettedMap[K, V comparable](capacity uint64, keyhasher hash.Hasher[K], opts ...options.Option[Options]) (*BuckettedMap[K, V], error) {
 	set, err := NewBuckettedSet[collections.KeyValue[K, V]](
 		capacity,
 		collections.KeyValueHasher[K, V](keyhasher),
@@ -37,7 +37,9 @@ func (m *BuckettedMap[K, V]) Get(key K) (collections.KeyValue[K, V], bool) {
 	kv := collections.NewKeyValue(key, generics.Empty[V]())
 	setitem := collections.NewHashItem(m.hasher.Hash(kv), kv)
 	bucket := m.bucketIndex(setitem)
-	v, ok := m.sets[bucket].Find(setitem)
+	v, ok := m.sets[bucket].FindH(setitem.Hash(), func(v collections.HashItem[collections.KeyValue[K, V]]) bool {
+		return v.Value().Key() == key
+	})
 	if ok {
 		return v.Value(), true
 	}
@@ -50,7 +52,9 @@ func (m *BuckettedMap[K, V]) Set(key K, item V) bool {
 	kv := collections.NewKeyValue(key, item)
 	setitem := collections.NewHashItem(m.hasher.Hash(kv), kv)
 	bucket := m.bucketIndex(setitem)
-	return m.sets[bucket].updateOrAdd(setitem)
+	return m.sets[bucket].updateOrAddF(setitem, func(v collections.HashItem[collections.KeyValue[K, V]]) bool {
+		return key == v.Value().Key()
+	})
 }
 
 // Append adds all items from the specified Rangeable to the BuckettedMap.

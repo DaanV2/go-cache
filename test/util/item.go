@@ -46,12 +46,16 @@ func Generate(amount int) []*TestItem {
 
 var _ hash.Hasher[*TestItem] = &TestItemHasher{}
 
-type TestItemHasher struct{}
+type TestItemHasher struct {
+	base intHasher[int]
+}
 
 func (t *TestItemHasher) Hash(item *TestItem) uint64 {
-	return uint64(item.ID)
+	return t.base.Hash(item.ID)
 }
 
 func Hasher() *TestItemHasher {
-	return &TestItemHasher{}
+	return &TestItemHasher{
+		base: intHasher[int]{},
+	}
 }

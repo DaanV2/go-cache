@@ -20,7 +20,7 @@ func Test_BuckettedSet(t *testing.T) {
 		items := test_util.Generate(int(size))
 		collections.Shuffle(items)
 
-		t.Run(fmt.Sprintf("Size(%v)", size), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Size(%d)", size), func(t *testing.T) {
 			for _, item := range items {
 				v, ok := col.GetOrAdd(item)
 				require.True(t, ok)
@@ -41,7 +41,7 @@ func Test_BuckettedSet_Concurrency(t *testing.T) {
 		collections.Shuffle(items)
 
 		t.Run(fmt.Sprintf("Concurrency(%v)", size), func(t *testing.T) {
-			splitWithOverlap(col, items)
+			pumpConcurrent(col, items)
 			check := make(map[int]int, size)
 
 			for item := range col.Read() {

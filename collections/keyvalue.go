@@ -34,11 +34,6 @@ func (kv KeyValue[K, V]) Value() V {
 	return kv.value
 }
 
-// Equal checks if the key of the current KeyValue pair is equal to the key of another KeyValue pair.
-func (kv KeyValue[K, V]) Equal(other KeyValue[K, V]) bool {
-	return kv.key == other.key
-}
-
 // kvHasher is a struct that implements the hash.Hasher interface for KeyValue pairs.
 type kvHasher[K comparable, V any] struct {
 	hasher hash.Hasher[K]

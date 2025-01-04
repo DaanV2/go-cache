@@ -94,8 +94,8 @@ func Test_BuckettedMap_Concurrency(t *testing.T) {
 		}
 		collections.Shuffle(items)
 
-		t.Run(fmt.Sprintf("Size(%v)/Cache(%s)", size, cache), func(t *testing.T) {
-			splitWithOverlap(col, items)
+		t.Run(fmt.Sprintf("Size(%d)/Cache(%s)", size, cache), func(t *testing.T) {
+			pumpConcurrent(col, items)
 			check := make(map[int]int, size)
 
 			for item := range col.Read() {
@@ -110,10 +110,10 @@ func Test_BuckettedMap_Concurrency(t *testing.T) {
 }
 
 func Test_BuckettedMap_Debug(t *testing.T) {
-	size := 2000
+	size := 50_000
 
 	t.Run(fmt.Sprintf("Concurrency(%v)", size), func(t *testing.T) {
-		col, err := large.NewBuckettedMap[int, string](1, test_util.CheapIntHasher[int]())
+		col, err := large.NewBuckettedMap[int, string](uint64(size), test_util.CheapIntHasher[int]())
 		require.NoError(t, err)
 
 		items := test_util.Generate(int(size))

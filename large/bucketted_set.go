@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/daanv2/go-cache/collections"
-	"github.com/daanv2/go-cache/pkg/constraints"
 	"github.com/daanv2/go-cache/pkg/hash"
 	"github.com/daanv2/go-cache/pkg/iterators"
 	"github.com/daanv2/go-cache/pkg/options"
@@ -15,14 +14,14 @@ import (
 )
 
 // BuckettedSet is a set of items, that uses a pre-defined amount of buckets, each item generates an hash, from which a bucket can be specified
-type BuckettedSet[T constraints.Equivalent[T]] struct {
+type BuckettedSet[T comparable] struct {
 	hasher hash.Hasher[T]
 	sets   []*GrowableSet[T]
 	base   Options
 }
 
 // NewBuckettedSet creates a new BuckettedSet with the specified capacity, hasher, and options.
-func NewBuckettedSet[T constraints.Equivalent[T]](capacity uint64, hasher hash.Hasher[T], opts ...options.Option[Options]) (*BuckettedSet[T], error) {
+func NewBuckettedSet[T comparable](capacity uint64, hasher hash.Hasher[T], opts ...options.Option[Options]) (*BuckettedSet[T], error) {
 	base, err := CreateOptions[T](opts...)
 	if err != nil {
 		return nil, err
@@ -49,6 +48,10 @@ func NewBuckettedSet[T constraints.Equivalent[T]](capacity uint64, hasher hash.H
 	}
 
 	return set, nil
+}
+
+func (s *BuckettedSet[T]) GetOptions() Options {
+	return s.base
 }
 
 // GetOrAdd will return the item if it exists, otherwise it will add the item to the set
@@ -152,7 +155,7 @@ func (m *BuckettedSet[T]) Grow(new_capacity uint64) {
 	wg.Wait()
 }
 
-func workerGrow[T constraints.Equivalent[T]](wg *sync.WaitGroup, process <-chan *GrowableSet[T], receiver *BuckettedSet[T]) {
+func workerGrow[T comparable](wg *sync.WaitGroup, process <-chan *GrowableSet[T], receiver *BuckettedSet[T]) {
 	defer wg.Done()
 	for s := range process {
 		s.Range(func(item T) bool {

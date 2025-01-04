@@ -10,3 +10,7 @@ type Set[T any] interface {
 	// GetOrAdd attempts to retrieve the specified item from the set, and if it does not exist,
 	GetOrAdd(item T) (T, bool)
 }
+
+type Map[K comparable, V any] interface {
+	Get(key K) (KeyValue[K, V], bool)
+}

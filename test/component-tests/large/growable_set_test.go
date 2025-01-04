@@ -41,7 +41,7 @@ func Test_GrowableSet_Concurrency(t *testing.T) {
 		collections.Shuffle(items)
 
 		t.Run(fmt.Sprintf("Concurrency(%v)", size), func(t *testing.T) {
-			splitWithOverlap(col, items)
+			pumpConcurrent(col, items)
 			check := make(map[int]int, size)
 
 			for item := range col.Read() {
