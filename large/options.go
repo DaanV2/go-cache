@@ -73,3 +73,10 @@ func WithBucketAmount(amount uint64) options.Option[Options] {
 		option.bucket_amount = amount
 	})
 }
+
+// WithBucketAmount sets the amount of buckets that the set will use
+func WithBucketFunction(calc func(capacity uint64) uint64) options.Option[Options] {
+	return options.NewFunction[Options](func(option *Options) {
+		option.bucket_amount_fn = calc
+	})
+}
