@@ -38,7 +38,7 @@ func Benchmark_BuckettedMap_Add(t *testing.B) {
 				)
 				require.NoError(t, err)
 
-				benchmarks.PumpSync(col, items)
+				benchmarks.PumpSyncMap(col, items)
 			}
 
 			benchmarks.ReportAdd(t, size)
@@ -56,7 +56,7 @@ func Benchmark_BuckettedMap_Add(t *testing.B) {
 			require.NoError(t, err)
 
 			for i := 0; i < t.N; i++ {
-				benchmarks.PumpSync(col, items)
+				benchmarks.PumpSyncMap(col, items)
 			}
 
 			benchmarks.ReportAdd(t, size)
@@ -74,7 +74,7 @@ func Benchmark_BuckettedMap_Add(t *testing.B) {
 				)
 				require.NoError(t, err)
 
-				benchmarks.PumpConcurrent(col, items)
+				benchmarks.PumpConcurrentMap(col, items)
 			}
 
 			benchmarks.ReportAdd(t, size)
@@ -92,7 +92,7 @@ func Benchmark_BuckettedMap_Add(t *testing.B) {
 			require.NoError(t, err)
 
 			for i := 0; i < t.N; i++ {
-				benchmarks.PumpConcurrent(col, items)
+				benchmarks.PumpConcurrentMap(col, items)
 			}
 
 			benchmarks.ReportAdd(t, size)
@@ -123,7 +123,7 @@ func Benchmark_BuckettedMap_Get(t *testing.B) {
 			)
 			require.NoError(t, err)
 
-			benchmarks.PumpSync(col, items)
+			benchmarks.PumpSyncMap(col, items)
 
 			t.Run("Single", func(t *testing.B) {
 				for i := 0; i < t.N; i++ {

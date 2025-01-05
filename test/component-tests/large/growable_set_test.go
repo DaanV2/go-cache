@@ -6,6 +6,7 @@ import (
 
 	"github.com/daanv2/go-cache/collections"
 	"github.com/daanv2/go-cache/large"
+	"github.com/daanv2/go-cache/test/benchmarks"
 	test_util "github.com/daanv2/go-cache/test/util"
 	"github.com/stretchr/testify/require"
 )
@@ -41,7 +42,7 @@ func Test_GrowableSet_Concurrency(t *testing.T) {
 		collections.Shuffle(items)
 
 		t.Run(fmt.Sprintf("Concurrency(%v)", size), func(t *testing.T) {
-			pumpConcurrent(col, items)
+			benchmarks.PumpConcurrentSet(col, items)
 			check := make(map[int]int, size)
 
 			for item := range col.Read() {

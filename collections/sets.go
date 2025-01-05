@@ -12,5 +12,6 @@ type Set[T any] interface {
 }
 
 type Map[K comparable, V any] interface {
+	Set(key K, value V) bool
 	Get(key K) (KeyValue[K, V], bool)
 }

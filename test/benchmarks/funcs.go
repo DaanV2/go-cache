@@ -18,7 +18,7 @@ var (
 	buffer = max(procs, 1000)
 )
 
-func PumpConcurrent[T any](set collections.Set[T], items []T) {
+func PumpConcurrentSet[T any](set collections.Set[T], items []T) {
 	wg := &sync.WaitGroup{}
 	pump := make(chan T, buffer)
 
@@ -27,28 +27,43 @@ func PumpConcurrent[T any](set collections.Set[T], items []T) {
 	for range procs {
 		wg.Add(1)
 
-		go PumpIntoSynced(wg, set, pump)
+		go PumpIntoSyncedSet(wg, set, pump)
 	}
 
 	wg.Wait()
 }
 
-func transferThenClose[T any](pump chan <- T, items []T) {
+func PumpConcurrentMap[K, V comparable](set collections.Map[K, V], items []collections.KeyValue[K, V]) {
+	wg := &sync.WaitGroup{}
+	pump := make(chan collections.KeyValue[K, V], buffer)
+
+	go transferThenClose(pump, items)
+
+	for range procs {
+		wg.Add(1)
+
+		go PumpIntoSyncedMap(wg, set, pump)
+	}
+
+	wg.Wait()
+}
+
+func transferThenClose[T any](pump chan<- T, items []T) {
 	l := len(items)
-	step := max(l * procs, 10)
+	step := max(l*procs, 10)
 	wg := &sync.WaitGroup{}
 
 	for i := 0; i < l; i += step {
 		wg.Add(1)
 
-		go transfer(wg, pump, items[i:min(i + step, l)])
+		go transfer(wg, pump, items[i:min(i+step, l)])
 	}
 
 	wg.Wait()
 	close(pump)
 }
 
-func transfer[T any](wg *sync.WaitGroup, pump chan <- T, items []T) {
+func transfer[T any](wg *sync.WaitGroup, pump chan<- T, items []T) {
 	defer wg.Done()
 
 	for _, item := range items {
@@ -56,15 +71,27 @@ func transfer[T any](wg *sync.WaitGroup, pump chan <- T, items []T) {
 	}
 }
 
-func PumpSync[T any](set collections.Set[T], items []T) {
+func PumpSyncSet[T any](set collections.Set[T], items []T) {
 	for _, item := range items {
 		_, _ = set.GetOrAdd(item)
 	}
 }
 
-func PumpInto[T any](set collections.Set[T], pump <-chan T) {
+func PumpSyncMap[K, V comparable](set collections.Map[K, V], items []collections.KeyValue[K, V]) {
+	for _, item := range items {
+		_ = set.Set(item.Key(), item.Value())
+	}
+}
+
+func PumpIntoSet[T any](set collections.Set[T], pump <-chan T) {
 	for item := range pump {
 		_, _ = set.GetOrAdd(item)
+	}
+}
+
+func PumpIntoMap[K, V comparable](set collections.Map[K, V], pump <-chan collections.KeyValue[K, V]) {
+	for item := range pump {
+		_ = set.Set(item.Key(), item.Value())
 	}
 }
 
@@ -100,13 +127,19 @@ func ReportAdd(t *testing.B, size uint64) {
 	inserts := float64(size) * float64(t.N)
 	ns := float64(t.Elapsed().Nanoseconds())
 
-	t.ReportMetric(inserts / ns, "inserts/ns")
+	t.ReportMetric(inserts/ns, "inserts/ns")
 	t.ReportMetric(inserts, "inserts")
 	t.ReportMetric(ns, "ns")
 }
 
-func PumpIntoSynced[T any](wg *sync.WaitGroup, set collections.Set[T], pump <-chan T) {
+func PumpIntoSyncedSet[T any](wg *sync.WaitGroup, set collections.Set[T], pump <-chan T) {
 	defer wg.Done()
 
-	PumpInto(set, pump)
+	PumpIntoSet(set, pump)
+}
+
+func PumpIntoSyncedMap[K, V comparable](wg *sync.WaitGroup, set collections.Map[K, V], pump <-chan collections.KeyValue[K, V]) {
+	defer wg.Done()
+
+	PumpIntoMap(set, pump)
 }

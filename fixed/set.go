@@ -112,19 +112,10 @@ func (s *Set[T]) Update(item collections.HashItem[T]) bool {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	return s.updatef(item, func(v collections.HashItem[T]) bool {
-		return item == v
-	})
+	return s.update(item)
 }
 
-func (s *Set[T]) UpdateF(item collections.HashItem[T], predicate func(item collections.HashItem[T]) bool) bool {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	return s.updatef(item, predicate)
-}
-
-func (s *Set[T]) updatef(item collections.HashItem[T], predicate func(item collections.HashItem[T]) bool) bool {
+func (s *Set[T]) update(item collections.HashItem[T]) bool {
 	if !s.hashrange.Has(item.Hash()) {
 		return false
 	}
@@ -132,7 +123,7 @@ func (s *Set[T]) updatef(item collections.HashItem[T], predicate func(item colle
 	sindex := s.index(item)
 	sub := s.items[sindex:]
 	for i, v := range sub {
-		if item.Hash() == v.Hash() && predicate(v) {
+		if v == item {
 			sub[i] = item
 			return true
 		}
@@ -140,7 +131,7 @@ func (s *Set[T]) updatef(item collections.HashItem[T], predicate func(item colle
 
 	sub = s.items[:sindex]
 	for i, v := range sub {
-		if item.Hash() == v.Hash() && predicate(v) {
+		if v == item {
 			sub[i] = item
 			return true
 		}
@@ -161,33 +152,6 @@ func (s *Set[T]) Read() iter.Seq[collections.HashItem[T]] {
 
 			if !yield(v) {
 				return
-			}
-		}
-	}
-}
-
-func (s *Set[T]) ReadH(hash uint64) iter.Seq[collections.HashItem[T]] {
-	return func(yield func(collections.HashItem[T]) bool) {
-		s.lock.RLock()
-		defer s.lock.RUnlock()
-
-		sindex := s.indexH(hash)
-
-		sub := s.items[sindex:]
-		for _, v := range sub {
-			if v.Hash() == hash {
-				if !yield(v) {
-					return
-				}
-			}
-		}
-
-		sub = s.items[:sindex]
-		for _, v := range sub {
-			if v.Hash() == hash {
-				if !yield(v) {
-					return
-				}
 			}
 		}
 	}

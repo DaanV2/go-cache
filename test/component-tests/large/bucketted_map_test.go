@@ -7,6 +7,7 @@ import (
 	"github.com/daanv2/go-cache/collections"
 	"github.com/daanv2/go-cache/large"
 	"github.com/daanv2/go-cache/pkg/hash"
+	"github.com/daanv2/go-cache/test/benchmarks"
 	test_util "github.com/daanv2/go-cache/test/util"
 	"github.com/daanv2/go-optimal/pkg/cpu"
 	"github.com/stretchr/testify/require"
@@ -95,13 +96,13 @@ func Test_BuckettedMap_Concurrency(t *testing.T) {
 		collections.Shuffle(items)
 
 		t.Run(fmt.Sprintf("Size(%d)/Cache(%s)", size, cache), func(t *testing.T) {
-			pumpConcurrent(col, items)
+			benchmarks.PumpConcurrentMap(col, items)
 			check := make(map[int]int, size)
 
-			for item := range col.Read() {
-				check[item.Key()] = check[item.Key()] + 1
-				if check[item.Key()] > 1 {
-					t.Logf("Key(%v) has more than 1 value", item.Key())
+			for key, item := range col.KeyValues() {
+				check[key] = check[key] + 1
+				if check[key] > 1 {
+					t.Logf("Key(%v) has more than 1 value", key, item)
 					t.Fail()
 				}
 			}

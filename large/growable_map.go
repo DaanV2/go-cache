@@ -15,31 +15,31 @@ import (
 	optimal "github.com/daanv2/go-optimal"
 )
 
-// GrowableSet is a set that grows as needed.
-type GrowableSet[T comparable] struct {
+// GrowableMap is a set that grows as needed.
+type GrowableMap[K, V comparable] struct {
 	Options
-	hasher      hash.Hasher[T]
-	buckets     []*fixed.Set[T]
+	hasher      hash.Hasher[K]
+	buckets     []*fixed.Map[K, V]
 	bucket_lock sync.RWMutex
 }
 
-// NewGrowableSet creates a new instance of GrowableSet with the provided hasher and options.
+// NewGrowableMap creates a new instance of GrowableMap with the provided hasher and options.
 // The hasher is used to hash the elements in the set, and options can be used to configure the set.
-func NewGrowableSet[T comparable](hasher hash.Hasher[T], opts ...options.Option[Options]) (*GrowableSet[T], error) {
+func NewGrowableMap[K, V comparable](hasher hash.Hasher[K], opts ...options.Option[Options]) (*GrowableMap[K, V], error) {
 	o := []options.Option[Options]{
-		WithBucketSize(uint64(optimal.SliceSize[T]())),
+		WithBucketSize(uint64(optimal.SliceSize[V]())),
 	}
 	o = append(o, opts...)
 
-	base, err := CreateOptions[T](o...)
+	base, err := CreateOptions[V](o...)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewGrowableSetFrom(hasher, base)
+	return NewGrowableMapFrom[K, V](hasher, base)
 }
 
-func NewGrowableSetFrom[T comparable](hasher hash.Hasher[T], base Options) (*GrowableSet[T], error) {
+func NewGrowableMapFrom[K, V comparable](hasher hash.Hasher[K], base Options) (*GrowableMap[K, V], error) {
 	// Validate
 	if hasher == nil {
 		return nil, errors.New("hasher is nil")
@@ -48,29 +48,29 @@ func NewGrowableSetFrom[T comparable](hasher hash.Hasher[T], base Options) (*Gro
 		return nil, errors.New("bucket size is too small <= 1")
 	}
 
-	return &GrowableSet[T]{
+	return &GrowableMap[K, V]{
 		Options:     base,
 		hasher:      hasher,
-		buckets:     make([]*fixed.Set[T], 0),
+		buckets:     make([]*fixed.Map[K, V], 0),
 		bucket_lock: sync.RWMutex{},
 	}, nil
 }
 
 // GetOrAdd returns the item if it exists in the set, otherwise it adds it and returns it.
-func (s *GrowableSet[T]) GetOrAdd(item T) (T, bool) {
-	setitem := collections.NewHashItem[T](s.hasher.Hash(item), item)
+func (s *GrowableMap[K, V]) GetOrAdd(item collections.KeyValue[K, V]) (collections.HashItem[collections.KeyValue[K, V]], bool) {
+	setitem := collections.NewHashItem[collections.KeyValue[K, V]](s.hasher.Hash(item.Key()), item)
 
 	return s.getOrAdd(setitem)
 }
 
 // UpdateOrAdd updates the item if it exists in the set, otherwise it adds it. Returns true if it had to add it instead of update.
-func (s *GrowableSet[T]) UpdateOrAdd(item T) bool {
-	setitem := collections.NewHashItem[T](s.hasher.Hash(item), item)
+func (s *GrowableMap[K, V]) UpdateOrAdd(item collections.KeyValue[K, V]) bool {
+	setitem := collections.NewHashItem[collections.KeyValue[K, V]](s.hasher.Hash(item.Key()), item)
 
 	return s.updateOrAdd(setitem)
 }
 
-func (s *GrowableSet[T]) getOrAdd(item collections.HashItem[T]) (T, bool) {
+func (s *GrowableMap[K, V]) getOrAdd(item collections.HashItem[collections.KeyValue[K, V]]) (collections.HashItem[collections.KeyValue[K, V]], bool) {
 	item_lock := s.items_lock.GetLock(item.Hash())
 
 	item_lock.Lock()
@@ -79,15 +79,15 @@ func (s *GrowableSet[T]) getOrAdd(item collections.HashItem[T]) (T, bool) {
 	// Find it
 	v, ok := s.Find(item)
 	if ok {
-		return v.Value(), false
+		return v, false
 	}
 
 	s.set(item)
-	return item.Value(), true
+	return item, true
 }
 
 // updateOrAdd TODO. return true if it had to add it instead of update
-func (s *GrowableSet[T]) updateOrAdd(item collections.HashItem[T]) bool {
+func (s *GrowableMap[K, V]) updateOrAdd(item collections.HashItem[collections.KeyValue[K, V]]) bool {
 	item_lock := s.items_lock.GetLock(item.Hash())
 
 	item_lock.Lock()
@@ -103,7 +103,7 @@ func (s *GrowableSet[T]) updateOrAdd(item collections.HashItem[T]) bool {
 	return true
 }
 
-func (s *GrowableSet[T]) updateIf(item collections.HashItem[T]) bool {
+func (s *GrowableMap[K, V]) updateIf(item collections.HashItem[collections.KeyValue[K, V]]) bool {
 	s.bucket_lock.RLock()
 	defer s.bucket_lock.RUnlock()
 
@@ -122,7 +122,7 @@ func (s *GrowableSet[T]) updateIf(item collections.HashItem[T]) bool {
 	return false
 }
 
-func (s *GrowableSet[T]) set(item collections.HashItem[T]) {
+func (s *GrowableMap[K, V]) set(item collections.HashItem[collections.KeyValue[K, V]]) {
 	s.bucket_lock.Lock()
 	defer s.bucket_lock.Unlock()
 
@@ -134,7 +134,7 @@ func (s *GrowableSet[T]) set(item collections.HashItem[T]) {
 	}
 
 	for {
-		b := fixed.NewSet[T](s.Options.bucket_size)
+		b := fixed.NewMap[K, V](s.Options.bucket_size)
 		s.buckets = append(s.buckets, &b)
 		if s.buckets[len(s.buckets)-1].Set(item) {
 			return
@@ -142,7 +142,7 @@ func (s *GrowableSet[T]) set(item collections.HashItem[T]) {
 	}
 }
 
-func (s *GrowableSet[T]) Find(item collections.HashItem[T]) (collections.HashItem[T], bool) {
+func (s *GrowableMap[K, V]) Find(item collections.HashItem[collections.KeyValue[K, V]]) (collections.HashItem[collections.KeyValue[K, V]], bool) {
 	s.bucket_lock.RLock()
 	defer s.bucket_lock.RUnlock()
 
@@ -158,14 +158,14 @@ func (s *GrowableSet[T]) Find(item collections.HashItem[T]) (collections.HashIte
 }
 
 // Read returns an iterator that reads the items in the set.
-func (s *GrowableSet[T]) Read() iter.Seq[T] {
-	return func(yield func(T) bool) {
+func (s *GrowableMap[K, V]) Read() iter.Seq[collections.HashItem[collections.KeyValue[K, V]]] {
+	return func(yield func(collections.HashItem[collections.KeyValue[K, V]]) bool) {
 		s.bucket_lock.RLock()
 		defer s.bucket_lock.RUnlock()
 
 		for _, bucket := range s.buckets {
 			for v := range bucket.Read() {
-				if !yield(v.Value()) {
+				if !yield(v) {
 					return
 				}
 			}
@@ -174,14 +174,14 @@ func (s *GrowableSet[T]) Read() iter.Seq[T] {
 }
 
 // Range calls the yield function for each item in the set.
-func (s *GrowableSet[T]) Range(yield func(item T) bool) {
+func (s *GrowableMap[K, V]) Range(yield func(item collections.HashItem[collections.KeyValue[K, V]]) bool) {
 	iterators.RangeCol(s, yield)
 }
 
-func (s *GrowableSet[T]) String() string {
-	return fmt.Sprintf("large.GrowableSet[%s,%v]", generics.NameOf[T](), len(s.buckets))
+func (s *GrowableMap[K, V]) String() string {
+	return fmt.Sprintf("large.GrowableMap[%s,%s,%v]", generics.NameOf[K](), generics.NameOf[V](), len(s.buckets))
 }
 
-func (s *GrowableSet[T]) GoString() string {
+func (s *GrowableMap[K, V]) GoString() string {
 	return s.String()
 }
