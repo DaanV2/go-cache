@@ -30,8 +30,8 @@ func Benchmark_Set_Get(b *testing.B) {
 
 		for _, item := range items {
 			v, ok := col.Get(item)
-			require.True(b, ok, "item not found: %s", item.Value())
-			require.Equal(b, v, item, "item not equal: %s != %s", v.Value(), item.Value())
+			require.True(b, ok, "item not found: %s", item.Value)
+			require.Equal(b, v, item, "item not equal: %s != %s", v.Value, item.Value)
 		}
 
 		b.Run(fmt.Sprintf("Get(%v)", size), func(t *testing.B) {
@@ -40,7 +40,7 @@ func Benchmark_Set_Get(b *testing.B) {
 			for i := 0; i < t.N; i++ {
 				for _, item := range items {
 					v, ok := col.Get(item)
-					if !ok || v.Value() == nil {
+					if !ok || v.Value == nil {
 						t.Fail()
 					}
 				}

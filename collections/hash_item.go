@@ -5,20 +5,20 @@ import (
 )
 
 type HashItem[T comparable] struct {
-	hash uint64
-	item T
+	Hash uint64
+	Value T
 }
 
-func NewHashItem[T comparable](hash uint64, item T) HashItem[T] {
-	return HashItem[T]{hash, item}
+func NewHashItem[T comparable](hash uint64, value T) HashItem[T] {
+	return HashItem[T]{hash, value}
 }
 
-func (s HashItem[T]) Hash() uint64 {
-	return s.hash
+func (s HashItem[T]) GetHash() uint64 {
+	return s.Hash
 }
 
-func (s HashItem[T]) Value() T {
-	return s.item
+func (s HashItem[T]) GetValue() T {
+	return s.Value
 }
 
 func (s HashItem[T]) IsEmpty() bool {

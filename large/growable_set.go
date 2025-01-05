@@ -71,24 +71,36 @@ func (s *GrowableSet[T]) UpdateOrAdd(item T) bool {
 }
 
 func (s *GrowableSet[T]) getOrAdd(item collections.HashItem[T]) (T, bool) {
-	item_lock := s.items_lock.GetLock(item.Hash())
+	item_lock := s.items_lock.GetLock(item.Hash)
 
 	item_lock.Lock()
 	defer item_lock.Unlock()
 
-	// Find it
-	v, ok := s.Find(item)
-	if ok {
-		return v.Value(), false
+	l := len(s.buckets)
+	switch l {
+	case 0:
+		s.set(item)
+		return item.Value, true
+	case 1:
+		if s.buckets[0].Set(item) {
+			return item.Value, true
+		}
+
+	default:
+		// Find it
+		v, ok := s.Find(item)
+		if ok {
+			return v.Value, false
+		}
 	}
 
 	s.set(item)
-	return item.Value(), true
+	return item.Value, true
 }
 
 // updateOrAdd TODO. return true if it had to add it instead of update
 func (s *GrowableSet[T]) updateOrAdd(item collections.HashItem[T]) bool {
-	item_lock := s.items_lock.GetLock(item.Hash())
+	item_lock := s.items_lock.GetLock(item.Hash)
 
 	item_lock.Lock()
 	defer item_lock.Unlock()
@@ -107,15 +119,23 @@ func (s *GrowableSet[T]) updateIf(item collections.HashItem[T]) bool {
 	s.bucket_lock.RLock()
 	defer s.bucket_lock.RUnlock()
 
-	// Try to find it
-	for i := range s.buckets {
-		if !s.buckets[i].HasHash(item.Hash()) {
-			continue
-		}
+	l := len(s.buckets)
+	switch l {
+	case 0:
+		break
+	case 1:
+		return s.buckets[0].Set(item)
+	default:
+		// Try to find it
+		for _, bucket := range s.buckets {
+			if !bucket.HasHash(item.Hash) {
+				continue
+			}
 
-		ok := s.buckets[i].Update(item)
-		if ok {
-			return true
+			ok := bucket.Update(item)
+			if ok {
+				return true
+			}
 		}
 	}
 
@@ -147,8 +167,12 @@ func (s *GrowableSet[T]) Find(item collections.HashItem[T]) (collections.HashIte
 	defer s.bucket_lock.RUnlock()
 
 	// Try to find it
-	for i := range s.buckets {
-		v, ok := s.buckets[i].Get(item)
+	for _, bucket := range s.buckets {
+		if !bucket.HasHash(item.Hash) {
+			continue
+		}
+
+		v, ok := bucket.Get(item)
 		if ok {
 			return v, true
 		}
@@ -165,7 +189,7 @@ func (s *GrowableSet[T]) Read() iter.Seq[T] {
 
 		for _, bucket := range s.buckets {
 			for v := range bucket.Read() {
-				if !yield(v.Value()) {
+				if !yield(v.Value) {
 					return
 				}
 			}

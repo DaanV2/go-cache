@@ -29,7 +29,7 @@ func Test_Map(t *testing.T) {
 	for i := range amount {
 		item, ok := col.Get(newItem(i, i))
 		require.True(t, ok, i)
-		require.EqualValues(t, item.Value(), i)
+		require.EqualValues(t, item.Value.Value(), i)
 	}
 
 	// Can set again
@@ -41,10 +41,10 @@ func Test_Map(t *testing.T) {
 	// Check for duplicates
 	check := make(map[uint64]bool, amount)
 	for item := range col.Read() {
-		v, ok := check[item.Value().Key()]
+		v, ok := check[item.Value.Key()]
 		require.False(t, ok, "item was duplicated %v", item)
 		require.False(t, v, "item was duplicated %v", item)
 
-		check[item.Value().Key()] = true
+		check[item.Value.Key()] = true
 	}
 }

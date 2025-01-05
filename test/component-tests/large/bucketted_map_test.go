@@ -29,7 +29,7 @@ func Test_BuckettedMap(t *testing.T) {
 				require.True(t, ok)
 
 				v, ok := col.Get(item.ID)
-				require.True(t, ok)
+				require.True(t, ok, item.ID)
 				require.Equal(t, v.Value(), item.Data)
 			}
 
@@ -102,7 +102,7 @@ func Test_BuckettedMap_Concurrency(t *testing.T) {
 			for key, item := range col.KeyValues() {
 				check[key] = check[key] + 1
 				if check[key] > 1 {
-					t.Logf("Key(%v) has more than 1 value", key, item)
+					t.Logf("Key(%v) has more than 1 value: %v", key, item)
 					t.Fail()
 				}
 			}

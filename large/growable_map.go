@@ -71,7 +71,7 @@ func (s *GrowableMap[K, V]) UpdateOrAdd(item collections.KeyValue[K, V]) bool {
 }
 
 func (s *GrowableMap[K, V]) getOrAdd(item collections.HashItem[collections.KeyValue[K, V]]) (collections.HashItem[collections.KeyValue[K, V]], bool) {
-	item_lock := s.items_lock.GetLock(item.Hash())
+	item_lock := s.items_lock.GetLock(item.Hash)
 
 	item_lock.Lock()
 	defer item_lock.Unlock()
@@ -88,7 +88,7 @@ func (s *GrowableMap[K, V]) getOrAdd(item collections.HashItem[collections.KeyVa
 
 // updateOrAdd TODO. return true if it had to add it instead of update
 func (s *GrowableMap[K, V]) updateOrAdd(item collections.HashItem[collections.KeyValue[K, V]]) bool {
-	item_lock := s.items_lock.GetLock(item.Hash())
+	item_lock := s.items_lock.GetLock(item.Hash)
 
 	item_lock.Lock()
 	defer item_lock.Unlock()
@@ -108,12 +108,12 @@ func (s *GrowableMap[K, V]) updateIf(item collections.HashItem[collections.KeyVa
 	defer s.bucket_lock.RUnlock()
 
 	// Try to find it
-	for i := range s.buckets {
-		if !s.buckets[i].HasHash(item.Hash()) {
+	for _, bucket := range s.buckets {
+		if !bucket.HasHash(item.Hash) {
 			continue
 		}
 
-		ok := s.buckets[i].Update(item)
+		ok := bucket.Update(item)
 		if ok {
 			return true
 		}
@@ -147,8 +147,12 @@ func (s *GrowableMap[K, V]) Find(item collections.HashItem[collections.KeyValue[
 	defer s.bucket_lock.RUnlock()
 
 	// Try to find it
-	for i := range s.buckets {
-		v, ok := s.buckets[i].Get(item)
+	for _, bucket := range s.buckets {
+		if !bucket.HasHash(item.Hash) {
+			continue
+		}
+
+		v, ok := bucket.Get(item)
 		if ok {
 			return v, true
 		}

@@ -74,7 +74,7 @@ func (s *BuckettedSet[T]) updateOrAdd(item collections.HashItem[T]) bool {
 
 // bucketIndex returns the index of the bucket that the item should be placed in
 func (s *BuckettedSet[T]) bucketIndex(item collections.HashItem[T]) uint64 {
-	return item.Hash() % uint64(len(s.sets))
+	return item.Hash % uint64(len(s.sets))
 }
 
 // Read will return a sequence of all items in the set

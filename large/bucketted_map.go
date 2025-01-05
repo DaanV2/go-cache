@@ -58,7 +58,7 @@ func (m *BuckettedMap[K, V]) Get(key K) (collections.KeyValue[K, V], bool) {
 	bucket := m.bucketIndex(setitem)
 	v, ok := m.sets[bucket].Find(setitem)
 	if ok {
-		return v.Value(), true
+		return v.Value, true
 	}
 
 	return collections.EmptyKeyValue[K, V](), false
@@ -90,7 +90,7 @@ func (m *BuckettedMap[K, V]) AppendParralel(other collections.ParralelRangeable[
 
 // bucketIndex returns the index of the bucket that the item should be placed in
 func (s *BuckettedMap[K, V]) bucketIndex(item collections.HashItem[collections.KeyValue[K, V]]) uint64 {
-	return item.Hash() % uint64(len(s.sets))
+	return item.Hash % uint64(len(s.sets))
 }
 
 // Read will return a sequence of all items in the set
@@ -111,7 +111,7 @@ func (s *BuckettedMap[K, V]) Keys() iter.Seq[K] {
 	return func(yield func(K) bool) {
 		for _, b := range s.sets {
 			for item := range b.Read() {
-				if !yield(item.Value().Key()) {
+				if !yield(item.Value.Key()) {
 					return
 				}
 			}
@@ -124,7 +124,7 @@ func (s *BuckettedMap[K, V]) Values() iter.Seq[V] {
 	return func(yield func(V) bool) {
 		for _, b := range s.sets {
 			for item := range b.Read() {
-				if !yield(item.Value().Value()) {
+				if !yield(item.Value.Value()) {
 					return
 				}
 			}
@@ -137,7 +137,7 @@ func (s *BuckettedMap[K, V]) KeyValues() iter.Seq2[K, V] {
 	return func(yield func(K, V) bool) {
 		for _, b := range s.sets {
 			for item := range b.Read() {
-				v := item.Value()
+				v := item.Value
 				if !yield(v.Key(), v.Value()) {
 					return
 				}
@@ -215,7 +215,7 @@ func workerMapGrow[K, V comparable](wg *sync.WaitGroup, process <-chan *Growable
 	defer wg.Done()
 	for s := range process {
 		s.Range(func(item collections.HashItem[collections.KeyValue[K, V]]) bool {
-			_ = receiver.Set(item.Value().Key(), item.Value().Value())
+			_ = receiver.Set(item.Value.Key(), item.Value.Value())
 			return true
 		})
 	}

@@ -5,13 +5,13 @@ import (
 	"sync"
 
 	"github.com/daanv2/go-cache/collections"
-	"github.com/daanv2/go-cache/pkg/hash"
+	"github.com/daanv2/go-cache/pkg/bloomfilters"
 )
 
 // Set is a fixed size slice, that can be used to store a fixed amount of items
 type Set[T comparable] struct {
 	amount    uint64
-	hashrange hash.Range
+	hashrange *bloomfilters.Cheap
 	items     []collections.HashItem[T] // The items in the slice
 	lock      sync.RWMutex              // The lock to protect the slice
 }
@@ -20,7 +20,7 @@ func NewSet[T comparable](amount uint64) Set[T] {
 	return Set[T]{
 		amount:    amount,
 		items:     make([]collections.HashItem[T], amount),
-		hashrange: hash.NewRange(),
+		hashrange: bloomfilters.NewCheap(amount),
 		lock:      sync.RWMutex{},
 	}
 }
@@ -38,18 +38,14 @@ func (s *Set[T]) HasHash(hash uint64) bool {
 }
 
 func (s *Set[T]) index(item collections.HashItem[T]) uint64 {
-	return item.Hash() % s.amount
-}
-
-func (s *Set[T]) indexH(hash uint64) uint64 {
-	return hash % s.amount
+	return item.Hash % s.amount
 }
 
 func (s *Set[T]) Get(item collections.HashItem[T]) (collections.HashItem[T], bool) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	if s.hashrange.Has(item.Hash()) {
+	if s.hashrange.Has(item.Hash) {
 		return s.get(item)
 	}
 
@@ -89,18 +85,24 @@ func (s *Set[T]) set(item collections.HashItem[T]) bool {
 
 	sub := s.items[sindex:]
 	for i, v := range sub {
-		if item == v || v.IsEmpty() {
+		if v.Hash == item.Hash && v.Value == item.Value {
 			sub[i] = item
-			s.hashrange.Update(item.Hash())
+			return true
+		} else if v.IsEmpty() {
+			sub[i] = item
+			s.hashrange.Set(item.Hash)
 			return true
 		}
 	}
 
 	sub = s.items[:sindex]
 	for i, v := range sub {
-		if item == v || v.IsEmpty() {
+		if v.Hash == item.Hash && v.Value == item.Value {
 			sub[i] = item
-			s.hashrange.Update(item.Hash())
+			return true
+		} else if v.IsEmpty() {
+			sub[i] = item
+			s.hashrange.Set(item.Hash)
 			return true
 		}
 	}
@@ -116,14 +118,10 @@ func (s *Set[T]) Update(item collections.HashItem[T]) bool {
 }
 
 func (s *Set[T]) update(item collections.HashItem[T]) bool {
-	if !s.hashrange.Has(item.Hash()) {
-		return false
-	}
-
 	sindex := s.index(item)
 	sub := s.items[sindex:]
 	for i, v := range sub {
-		if v == item {
+		if v.Hash == item.Hash && v.Value == item.Value {
 			sub[i] = item
 			return true
 		}
@@ -131,7 +129,7 @@ func (s *Set[T]) update(item collections.HashItem[T]) bool {
 
 	sub = s.items[:sindex]
 	for i, v := range sub {
-		if v == item {
+		if v.Hash == item.Hash && v.Value == item.Value {
 			sub[i] = item
 			return true
 		}
