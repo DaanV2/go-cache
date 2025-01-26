@@ -85,10 +85,7 @@ func (s *Set[T]) set(item collections.HashItem[T]) bool {
 
 	sub := s.items[sindex:]
 	for i, v := range sub {
-		if v.Hash == item.Hash && v.Value == item.Value {
-			sub[i] = item
-			return true
-		} else if v.IsEmpty() {
+		if (v.Hash == item.Hash && v.Value == item.Value) || v.IsEmpty() {
 			sub[i] = item
 			s.hashrange.Set(item.Hash)
 			return true
@@ -97,10 +94,7 @@ func (s *Set[T]) set(item collections.HashItem[T]) bool {
 
 	sub = s.items[:sindex]
 	for i, v := range sub {
-		if v.Hash == item.Hash && v.Value == item.Value {
-			sub[i] = item
-			return true
-		} else if v.IsEmpty() {
+		if (v.Hash == item.Hash && v.Value == item.Value) || v.IsEmpty() {
 			sub[i] = item
 			s.hashrange.Set(item.Hash)
 			return true

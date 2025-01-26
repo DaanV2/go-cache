@@ -124,8 +124,8 @@ func Test_BuckettedMap_Debug(t *testing.T) {
 			ok := col.Set(item.ID, item.Data)
 			require.True(t, ok)
 
-			v, ok := col.Get(item.ID)
-			require.True(t, ok)
+			v, ok := col.Get(item.ID) //FIXME
+			require.True(t, ok, item.ID)
 			require.Equal(t, v.Value(), item.Data)
 		}
 

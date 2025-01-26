@@ -85,10 +85,7 @@ func (s *Map[K, V]) set(item collections.HashItem[collections.KeyValue[K, V]]) b
 
 	sub := s.items[sindex:]
 	for i, v := range sub {
-		if sameKey(item, v) {
-			sub[i] = item
-			return true
-		} else if v.IsEmpty() {
+		if sameKey(item, v) || v.IsEmpty() {
 			sub[i] = item
 			s.hashrange.Update(item.Hash)
 			return true
@@ -97,10 +94,7 @@ func (s *Map[K, V]) set(item collections.HashItem[collections.KeyValue[K, V]]) b
 
 	sub = s.items[:sindex]
 	for i, v := range sub {
-		if sameKey(item, v) {
-			sub[i] = item
-			return true
-		} else if v.IsEmpty() {
+		if sameKey(item, v) || v.IsEmpty() {
 			sub[i] = item
 			s.hashrange.Update(item.Hash)
 			return true
