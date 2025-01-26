@@ -3,24 +3,20 @@ package maps
 import (
 	"iter"
 	"sync"
-
-	"github.com/daanv2/go-cache/pkg/hash"
 )
 
 // Fixed is a fixed size slice, that can be used to store a fixed amount of items
 type Fixed[K, V comparable] struct {
-	amount    uint64
-	hashrange hash.Range
-	items     []KeyValue[K, V] // The items in the slice
-	lock      sync.RWMutex     // The lock to protect the slice
+	amount uint64
+	items  []KeyValue[K, V] // The items in the slice
+	lock   sync.RWMutex     // The lock to protect the slice
 }
 
 func NewFixed[K, V comparable](amount uint64) Fixed[K, V] {
 	return Fixed[K, V]{
-		amount:    amount,
-		items:     make([]KeyValue[K, V], amount),
-		hashrange: hash.NewRange(),
-		lock:      sync.RWMutex{},
+		amount: amount,
+		items:  make([]KeyValue[K, V], amount),
+		lock:   sync.RWMutex{},
 	}
 }
 
@@ -32,10 +28,6 @@ func (s *Fixed[K, V]) Len() int {
 	return len(s.items)
 }
 
-func (s *Fixed[K, V]) HasHash(hash uint64) bool {
-	return s.hashrange.Has(hash)
-}
-
 func (s *Fixed[K, V]) index(item KeyValue[K, V]) uint64 {
 	return item.Hash % s.amount
 }
@@ -44,25 +36,19 @@ func (s *Fixed[K, V]) Get(item KeyValue[K, V]) (KeyValue[K, V], bool) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	if s.hashrange.Has(item.Hash) {
-		return s.get(item)
-	}
-
-	return item, false
+	return s.get(item)
 }
 
 func (s *Fixed[K, V]) get(item KeyValue[K, V]) (KeyValue[K, V], bool) {
 	sindex := s.index(item)
 
-	sub := s.items[sindex:]
-	for _, v := range sub {
+	for _, v := range s.items[sindex:] {
 		if sameKey(item, v) {
 			return v, true
 		}
 	}
 
-	sub = s.items[:sindex]
-	for _, v := range sub {
+	for _, v := range s.items[:sindex] {
 		if sameKey(item, v) {
 			return v, true
 		}
@@ -86,7 +72,6 @@ func (s *Fixed[K, V]) set(item KeyValue[K, V]) bool {
 	for i, spot := range sub {
 		if spot.IsEmpty() || sameKey(item, spot) {
 			sub[i] = item
-			s.hashrange.Update(item.Hash)
 			return true
 		}
 	}
@@ -95,7 +80,6 @@ func (s *Fixed[K, V]) set(item KeyValue[K, V]) bool {
 	for i, spot := range sub {
 		if spot.IsEmpty() || sameKey(item, spot) {
 			sub[i] = item
-			s.hashrange.Update(item.Hash)
 			return true
 		}
 	}
@@ -111,24 +95,20 @@ func (s *Fixed[K, V]) Update(item KeyValue[K, V]) bool {
 }
 
 func (s *Fixed[K, V]) update(item KeyValue[K, V]) bool {
-	if !s.hashrange.Has(item.Hash) {
-		return false
-	}
-
 	sindex := s.index(item)
 	sub := s.items[sindex:]
 	for i, v := range sub {
 		if sameKey(item, v) {
-			sub[i] = item
-			return true
+				sub[i] = item
+				return true
 		}
 	}
 
 	sub = s.items[:sindex]
 	for i, v := range sub {
 		if sameKey(item, v) {
-			sub[i] = item
-			return true
+				sub[i] = item
+				return true
 		}
 	}
 

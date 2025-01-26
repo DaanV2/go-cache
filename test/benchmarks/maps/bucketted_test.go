@@ -1,4 +1,4 @@
-package large_test
+package maps_test
 
 import (
 	"fmt"
@@ -14,7 +14,6 @@ import (
 )
 
 func Benchmark_BuckettedMap_Add(t *testing.B) {
-	t.SkipNow()
 	sizes := []uint64{50_000, 100_000}
 	target := benchmarks.CacheTargets()
 	keyhasher := hash.IntegerHasher[int](hash.MD5)
@@ -102,13 +101,12 @@ func Benchmark_BuckettedMap_Add(t *testing.B) {
 }
 
 func Benchmark_BuckettedMap_Get(t *testing.B) {
-	t.SkipNow()
 	sizes := []uint64{100, 200, 300, 400, 1000, 5000, 10_000, 50_000, 100_000}
 	target := benchmarks.CacheTargets()
 	keyhasher := hash.IntegerHasher[int](hash.MD5)
 
 	test_util.Case2(sizes, target, func(size uint64, cache cpu.CacheKind) {
-		t.Run(fmt.Sprintf("Size(%d)/Cache(%s)", size, cache), func(b *testing.B) {
+		t.Run(fmt.Sprintf("Size(%d)/Cache(%s)", size, cache), func(t *testing.B) {
 			// Report
 			t.ReportMetric(float64(size), "size")
 
@@ -129,14 +127,15 @@ func Benchmark_BuckettedMap_Get(t *testing.B) {
 
 			t.Run("Single", func(t *testing.B) {
 				for i := 0; i < t.N; i++ {
-
+					for _, item := range items {
+						v, ok := col.Get(item.GetKey())
+						if !ok || v.Key != item.GetKey() {
+							t.Fail()
+						}
+					}
 				}
-			})
 
-			t.Run("Concur", func(t *testing.B) {
-				for i := 0; i < t.N; i++ {
-
-				}
+				benchmarks.ReportAdd(t, size)
 			})
 		})
 	})

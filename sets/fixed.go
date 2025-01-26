@@ -56,14 +56,14 @@ func (s *Fixed[T]) get(item SetItem[T]) (SetItem[T], bool) {
 
 	sub := s.items[sindex:]
 	for _, v := range sub {
-		if item == v {
+		if sameItem(item, v) {
 			return v, true
 		}
 	}
 
 	sub = s.items[:sindex]
 	for _, v := range sub {
-		if item == v {
+		if sameItem(item, v) {
 			return v, true
 		}
 	}
@@ -84,7 +84,7 @@ func (s *Fixed[T]) set(item SetItem[T]) bool {
 
 	sub := s.items[sindex:]
 	for i, v := range sub {
-		if (v.Hash == item.Hash && v.Value == item.Value) || v.IsEmpty() {
+		if sameItem(item, v) || v.IsEmpty() {
 			sub[i] = item
 			s.hashrange.Set(item.Hash)
 			return true
@@ -93,7 +93,7 @@ func (s *Fixed[T]) set(item SetItem[T]) bool {
 
 	sub = s.items[:sindex]
 	for i, v := range sub {
-		if (v.Hash == item.Hash && v.Value == item.Value) || v.IsEmpty() {
+		if sameItem(item, v) || v.IsEmpty() {
 			sub[i] = item
 			s.hashrange.Set(item.Hash)
 			return true
@@ -114,7 +114,7 @@ func (s *Fixed[T]) update(item SetItem[T]) bool {
 	sindex := s.index(item)
 	sub := s.items[sindex:]
 	for i, v := range sub {
-		if v.Hash == item.Hash && v.Value == item.Value {
+		if sameItem(item, v) {
 			sub[i] = item
 			return true
 		}
@@ -122,7 +122,7 @@ func (s *Fixed[T]) update(item SetItem[T]) bool {
 
 	sub = s.items[:sindex]
 	for i, v := range sub {
-		if v.Hash == item.Hash && v.Value == item.Value {
+		if sameItem(item, v) {
 			sub[i] = item
 			return true
 		}
@@ -146,4 +146,9 @@ func (s *Fixed[T]) Read() iter.Seq[SetItem[T]] {
 			}
 		}
 	}
+}
+
+func sameItem[T comparable](a, b SetItem[T]) bool {
+	return a.Hash == b.Hash &&
+		a.Value == b.Value
 }

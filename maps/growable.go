@@ -118,10 +118,6 @@ func (s *GrowableMap[K, V]) updateIf(item KeyValue[K, V]) bool {
 
 	// Try to find it
 	for _, bucket := range s.buckets {
-		if !bucket.HasHash(item.Hash) {
-			continue
-		}
-
 		ok := bucket.Update(item)
 		if ok {
 			return true
@@ -157,10 +153,6 @@ func (s *GrowableMap[K, V]) Find(item KeyValue[K, V]) (KeyValue[K, V], bool) {
 
 	// Try to find it
 	for _, bucket := range s.buckets {
-		if !bucket.HasHash(item.Hash) {
-			continue
-		}
-
 		v, ok := bucket.Get(item)
 		if ok {
 			return v, true

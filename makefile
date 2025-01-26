@@ -9,8 +9,11 @@ show-coverage-report: test
 	go tool cover -html=reports/coverage.out
 
 benchmark:
-	go test -benchmem -run=^$$ -bench . ./test/benchmarks/maps --cpuprofile ./reports/benchmark-cpu-maps.pprof --memprofile ./reports/benchmark-mem-maps.pprof -blockprofile ./reports/benchmark-block-maps.pprof
-	go test -benchmem -run=^$$ -bench . ./test/benchmarks/sets --cpuprofile ./reports/benchmark-cpu-sets.pprof --memprofile ./reports/benchmark-mem-sets.pprof -blockprofile ./reports/benchmark-block-sets.pprof
+	go test -benchmem -bench . ./...
+
+benchmark-profile:
+	go test -benchmem -bench . ./test/benchmarks/maps --cpuprofile ./reports/benchmark-cpu-maps.pprof --memprofile ./reports/benchmark-mem-maps.pprof -blockprofile ./reports/benchmark-block-maps.pprof
+	go test -benchmem -bench . ./test/benchmarks/sets --cpuprofile ./reports/benchmark-cpu-sets.pprof --memprofile ./reports/benchmark-mem-sets.pprof -blockprofile ./reports/benchmark-block-sets.pprof
 
 pprof:
 	go tool pprof --http=:8080 ./reports/benchmark-cpu-sets.pprof ./reports/benchmark-cpu-maps.pprof
