@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/daanv2/go-cache/collections"
 	"github.com/daanv2/go-cache/large"
+	"github.com/daanv2/go-cache/pkg/collections"
 	"github.com/daanv2/go-cache/test/benchmarks"
 	test_util "github.com/daanv2/go-cache/test/util"
 	"github.com/stretchr/testify/require"

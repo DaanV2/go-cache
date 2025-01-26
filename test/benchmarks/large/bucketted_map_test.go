@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/daanv2/go-cache/collections"
+	"github.com/daanv2/go-cache/fixed"
 	"github.com/daanv2/go-cache/large"
+	"github.com/daanv2/go-cache/pkg/collections"
 	"github.com/daanv2/go-cache/pkg/hash"
 	"github.com/daanv2/go-cache/test/benchmarks"
 	test_util "github.com/daanv2/go-cache/test/util"
@@ -17,12 +18,13 @@ func Benchmark_BuckettedMap_Add(t *testing.B) {
 	t.SkipNow()
 	sizes := []uint64{50_000, 100_000}
 	target := benchmarks.CacheTargets()
+	keyhasher := hash.IntegerHasher[int](hash.MD5)
 
 	test_util.Case2(sizes, target, func(size uint64, cache cpu.CacheKind) {
 		// Setup
-		items := make([]collections.KeyValue[int, string], 0, int(size))
+		items := make([]benchmarks.KeyValue[int, string], 0, int(size))
 		for _, item := range test_util.Generate(int(size)) {
-			items = append(items, collections.NewKeyValue[int, string](item.ID, item.Data))
+			items = append(items, fixed.NewKeyValue[int, string](keyhasher.Hash(item.ID), item.ID, item.Data))
 		}
 		collections.Shuffle(items)
 
@@ -34,7 +36,7 @@ func Benchmark_BuckettedMap_Add(t *testing.B) {
 				col, err := large.NewBuckettedMap[int, string](
 					size,
 					hash.IntegerHasher[int](hash.MD5),
-					large.WithCacheTarget[collections.KeyValue[int, string]](cache),
+					large.WithCacheTarget[fixed.KeyValue[int, string]](cache),
 				)
 				require.NoError(t, err)
 
@@ -51,7 +53,7 @@ func Benchmark_BuckettedMap_Add(t *testing.B) {
 			col, err := large.NewBuckettedMap[int, string](
 				size,
 				hash.IntegerHasher[int](hash.MD5),
-				large.WithCacheTarget[collections.KeyValue[int, string]](cache),
+				large.WithCacheTarget[fixed.KeyValue[int, string]](cache),
 			)
 			require.NoError(t, err)
 
@@ -70,7 +72,7 @@ func Benchmark_BuckettedMap_Add(t *testing.B) {
 				col, err := large.NewBuckettedMap[int, string](
 					size,
 					hash.IntegerHasher[int](hash.MD5),
-					large.WithCacheTarget[collections.KeyValue[int, string]](cache),
+					large.WithCacheTarget[fixed.KeyValue[int, string]](cache),
 				)
 				require.NoError(t, err)
 
@@ -87,7 +89,7 @@ func Benchmark_BuckettedMap_Add(t *testing.B) {
 			col, err := large.NewBuckettedMap[int, string](
 				size,
 				hash.IntegerHasher[int](hash.MD5),
-				large.WithCacheTarget[collections.KeyValue[int, string]](cache),
+				large.WithCacheTarget[fixed.KeyValue[int, string]](cache),
 			)
 			require.NoError(t, err)
 
@@ -104,6 +106,7 @@ func Benchmark_BuckettedMap_Get(t *testing.B) {
 	t.SkipNow()
 	sizes := []uint64{100, 200, 300, 400, 1000, 5000, 10_000, 50_000, 100_000}
 	target := benchmarks.CacheTargets()
+	keyhasher := hash.IntegerHasher[int](hash.MD5)
 
 	test_util.Case2(sizes, target, func(size uint64, cache cpu.CacheKind) {
 		t.Run(fmt.Sprintf("Size(%d)/Cache(%s)", size, cache), func(b *testing.B) {
@@ -111,15 +114,15 @@ func Benchmark_BuckettedMap_Get(t *testing.B) {
 			t.ReportMetric(float64(size), "size")
 
 			// Setup
-			items := make([]collections.KeyValue[int, string], 0, int(size))
+			items := make([]benchmarks.KeyValue[int, string], 0, int(size))
 			for _, item := range test_util.Generate(int(size)) {
-				items = append(items, collections.NewKeyValue[int, string](item.ID, item.Data))
+				items = append(items, fixed.NewKeyValue[int, string](keyhasher.Hash(item.ID), item.ID, item.Data))
 			}
 			collections.Shuffle(items)
 			col, err := large.NewBuckettedMap[int, string](
 				size,
 				hash.IntegerHasher[int](hash.MD5),
-				large.WithCacheTarget[collections.KeyValue[int, string]](cache),
+				large.WithCacheTarget[fixed.KeyValue[int, string]](cache),
 			)
 			require.NoError(t, err)
 

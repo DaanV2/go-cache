@@ -3,7 +3,6 @@ package fixed_test
 import (
 	"testing"
 
-	"github.com/daanv2/go-cache/collections"
 	"github.com/daanv2/go-cache/fixed"
 	"github.com/stretchr/testify/require"
 )
@@ -12,10 +11,11 @@ func Test_Map(t *testing.T) {
 	amount := uint64(41)
 	col := fixed.NewMap[uint64, uint64](amount + 10)
 
-	newItem := func(id, v uint64) collections.HashItem[collections.KeyValue[uint64, uint64]] {
-		return collections.NewHashItem(
+	newItem := func(id, v uint64) fixed.KeyValue[uint64, uint64] {
+		return fixed.NewKeyValue(
 			id,
-			collections.NewKeyValue(id, v),
+			id,
+			v,
 		)
 	}
 
@@ -29,7 +29,7 @@ func Test_Map(t *testing.T) {
 	for i := range amount {
 		item, ok := col.Get(newItem(i, i))
 		require.True(t, ok, i)
-		require.EqualValues(t, item.Value.Value(), i)
+		require.EqualValues(t, item.Value, i)
 	}
 
 	// Can set again
@@ -41,10 +41,10 @@ func Test_Map(t *testing.T) {
 	// Check for duplicates
 	check := make(map[uint64]bool, amount)
 	for item := range col.Read() {
-		v, ok := check[item.Value.Key()]
+		v, ok := check[item.Key]
 		require.False(t, ok, "item was duplicated %v", item)
 		require.False(t, v, "item was duplicated %v", item)
 
-		check[item.Value.Key()] = true
+		check[item.Key] = true
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"iter"
 	"sync"
 
-	"github.com/daanv2/go-cache/collections"
 	"github.com/daanv2/go-cache/pkg/hash"
 )
 
@@ -12,14 +11,14 @@ import (
 type Map[K, V comparable] struct {
 	amount    uint64
 	hashrange hash.Range
-	items     []collections.HashItem[collections.KeyValue[K, V]] // The items in the slice
-	lock      sync.RWMutex                                       // The lock to protect the slice
+	items     []KeyValue[K, V] // The items in the slice
+	lock      sync.RWMutex     // The lock to protect the slice
 }
 
 func NewMap[K, V comparable](amount uint64) Map[K, V] {
 	return Map[K, V]{
 		amount:    amount,
-		items:     make([]collections.HashItem[collections.KeyValue[K, V]], amount),
+		items:     make([]KeyValue[K, V], amount),
 		hashrange: hash.NewRange(),
 		lock:      sync.RWMutex{},
 	}
@@ -37,11 +36,11 @@ func (s *Map[K, V]) HasHash(hash uint64) bool {
 	return s.hashrange.Has(hash)
 }
 
-func (s *Map[K, V]) index(item collections.HashItem[collections.KeyValue[K, V]]) uint64 {
+func (s *Map[K, V]) index(item KeyValue[K, V]) uint64 {
 	return item.Hash % s.amount
 }
 
-func (s *Map[K, V]) Get(item collections.HashItem[collections.KeyValue[K, V]]) (collections.HashItem[collections.KeyValue[K, V]], bool) {
+func (s *Map[K, V]) Get(item KeyValue[K, V]) (KeyValue[K, V], bool) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -52,7 +51,7 @@ func (s *Map[K, V]) Get(item collections.HashItem[collections.KeyValue[K, V]]) (
 	return item, false
 }
 
-func (s *Map[K, V]) get(item collections.HashItem[collections.KeyValue[K, V]]) (collections.HashItem[collections.KeyValue[K, V]], bool) {
+func (s *Map[K, V]) get(item KeyValue[K, V]) (KeyValue[K, V], bool) {
 	sindex := s.index(item)
 
 	sub := s.items[sindex:]
@@ -73,19 +72,19 @@ func (s *Map[K, V]) get(item collections.HashItem[collections.KeyValue[K, V]]) (
 }
 
 // Map Add the given item to the set, if equivalant item was overriden, or empty space filled, true is returned
-func (s *Map[K, V]) Set(item collections.HashItem[collections.KeyValue[K, V]]) bool {
+func (s *Map[K, V]) Set(item KeyValue[K, V]) bool {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	return s.set(item)
 }
 
-func (s *Map[K, V]) set(item collections.HashItem[collections.KeyValue[K, V]]) bool {
+func (s *Map[K, V]) set(item KeyValue[K, V]) bool {
 	sindex := s.index(item)
 
 	sub := s.items[sindex:]
-	for i, v := range sub {
-		if sameKey(item, v) || v.IsEmpty() {
+	for i, spot := range sub {
+		if sameKey(item, spot) || spot.IsEmpty() {
 			sub[i] = item
 			s.hashrange.Update(item.Hash)
 			return true
@@ -93,8 +92,8 @@ func (s *Map[K, V]) set(item collections.HashItem[collections.KeyValue[K, V]]) b
 	}
 
 	sub = s.items[:sindex]
-	for i, v := range sub {
-		if sameKey(item, v) || v.IsEmpty() {
+	for i, spot := range sub {
+		if sameKey(item, spot) || spot.IsEmpty() {
 			sub[i] = item
 			s.hashrange.Update(item.Hash)
 			return true
@@ -104,14 +103,14 @@ func (s *Map[K, V]) set(item collections.HashItem[collections.KeyValue[K, V]]) b
 	return false
 }
 
-func (s *Map[K, V]) Update(item collections.HashItem[collections.KeyValue[K, V]]) bool {
+func (s *Map[K, V]) Update(item KeyValue[K, V]) bool {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	return s.update(item)
 }
 
-func (s *Map[K, V]) update(item collections.HashItem[collections.KeyValue[K, V]]) bool {
+func (s *Map[K, V]) update(item KeyValue[K, V]) bool {
 	if !s.hashrange.Has(item.Hash) {
 		return false
 	}
@@ -136,8 +135,8 @@ func (s *Map[K, V]) update(item collections.HashItem[collections.KeyValue[K, V]]
 	return false
 }
 
-func (s *Map[K, V]) Read() iter.Seq[collections.HashItem[collections.KeyValue[K, V]]] {
-	return func(yield func(collections.HashItem[collections.KeyValue[K, V]]) bool) {
+func (s *Map[K, V]) Read() iter.Seq[KeyValue[K, V]] {
+	return func(yield func(KeyValue[K, V]) bool) {
 		s.lock.RLock()
 		defer s.lock.RUnlock()
 
@@ -153,7 +152,7 @@ func (s *Map[K, V]) Read() iter.Seq[collections.HashItem[collections.KeyValue[K,
 	}
 }
 
-func sameKey[K, V comparable](a, b collections.HashItem[collections.KeyValue[K, V]]) bool {
+func sameKey[K, V comparable](a, b KeyValue[K, V]) bool {
 	return a.Hash == b.Hash &&
-		a.Value.Key() == b.Value.Key()
+		a.Key == b.Key
 }

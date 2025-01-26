@@ -6,7 +6,6 @@ import (
 	"iter"
 	"sync"
 
-	"github.com/daanv2/go-cache/collections"
 	"github.com/daanv2/go-cache/fixed"
 	"github.com/daanv2/go-cache/pkg/hash"
 	"github.com/daanv2/go-cache/pkg/iterators"
@@ -56,21 +55,32 @@ func NewGrowableMapFrom[K, V comparable](hasher hash.Hasher[K], base Options) (*
 	}, nil
 }
 
-// GetOrAdd returns the item if it exists in the set, otherwise it adds it and returns it.
-func (s *GrowableMap[K, V]) GetOrAdd(item collections.KeyValue[K, V]) (collections.HashItem[collections.KeyValue[K, V]], bool) {
-	setitem := collections.NewHashItem[collections.KeyValue[K, V]](s.hasher.Hash(item.Key()), item)
-
-	return s.getOrAdd(setitem)
+func (s *GrowableMap[K, V]) NewKeyValue(key K, value V) fixed.KeyValue[K, V] {
+	return fixed.NewKeyValue(s.hasher.Hash(key), key, value)
 }
 
 // UpdateOrAdd updates the item if it exists in the set, otherwise it adds it. Returns true if it had to add it instead of update.
-func (s *GrowableMap[K, V]) UpdateOrAdd(item collections.KeyValue[K, V]) bool {
-	setitem := collections.NewHashItem[collections.KeyValue[K, V]](s.hasher.Hash(item.Key()), item)
-
-	return s.updateOrAdd(setitem)
+func (s *GrowableMap[K, V]) UpdateOrAdd(key K, value V) bool {
+	return s.updateOrAdd(s.NewKeyValue(key, value))
 }
 
-func (s *GrowableMap[K, V]) getOrAdd(item collections.HashItem[collections.KeyValue[K, V]]) (collections.HashItem[collections.KeyValue[K, V]], bool) {
+// UpdateOrAdd updates the item if it exists in the set, otherwise it adds it. Returns true if it had to add it instead of update.
+func (s *GrowableMap[K, V]) UpdateOrAddKV(item fixed.KeyValue[K, V]) bool {
+	return s.updateOrAdd(item)
+}
+
+// GetOrAdd returns the item if it exists in the set, otherwise it adds it and returns it.
+func (s *GrowableMap[K, V]) GetOrAdd(key K, value V) (fixed.KeyValue[K, V], bool) {
+	return s.getOrAdd(s.NewKeyValue(key, value))
+}
+
+// GetOrAdd returns the item if it exists in the set, otherwise it adds it and returns it.
+func (s *GrowableMap[K, V]) GetOrAddKV(item fixed.KeyValue[K, V]) (fixed.KeyValue[K, V], bool) {
+	return s.getOrAdd(item)
+}
+
+// GetOrAdd returns the item if it exists in the set, otherwise it adds it and returns it.
+func (s *GrowableMap[K, V]) getOrAdd(item fixed.KeyValue[K, V]) (fixed.KeyValue[K, V], bool) {
 	item_lock := s.items_lock.GetLock(item.Hash)
 
 	item_lock.Lock()
@@ -87,7 +97,7 @@ func (s *GrowableMap[K, V]) getOrAdd(item collections.HashItem[collections.KeyVa
 }
 
 // updateOrAdd TODO. return true if it had to add it instead of update
-func (s *GrowableMap[K, V]) updateOrAdd(item collections.HashItem[collections.KeyValue[K, V]]) bool {
+func (s *GrowableMap[K, V]) updateOrAdd(item fixed.KeyValue[K, V]) bool {
 	item_lock := s.items_lock.GetLock(item.Hash)
 
 	item_lock.Lock()
@@ -103,7 +113,7 @@ func (s *GrowableMap[K, V]) updateOrAdd(item collections.HashItem[collections.Ke
 	return true
 }
 
-func (s *GrowableMap[K, V]) updateIf(item collections.HashItem[collections.KeyValue[K, V]]) bool {
+func (s *GrowableMap[K, V]) updateIf(item fixed.KeyValue[K, V]) bool {
 	s.bucket_lock.RLock()
 	defer s.bucket_lock.RUnlock()
 
@@ -122,7 +132,7 @@ func (s *GrowableMap[K, V]) updateIf(item collections.HashItem[collections.KeyVa
 	return false
 }
 
-func (s *GrowableMap[K, V]) set(item collections.HashItem[collections.KeyValue[K, V]]) {
+func (s *GrowableMap[K, V]) set(item fixed.KeyValue[K, V]) {
 	s.bucket_lock.Lock()
 	defer s.bucket_lock.Unlock()
 
@@ -142,7 +152,7 @@ func (s *GrowableMap[K, V]) set(item collections.HashItem[collections.KeyValue[K
 	}
 }
 
-func (s *GrowableMap[K, V]) Find(item collections.HashItem[collections.KeyValue[K, V]]) (collections.HashItem[collections.KeyValue[K, V]], bool) {
+func (s *GrowableMap[K, V]) Find(item fixed.KeyValue[K, V]) (fixed.KeyValue[K, V], bool) {
 	s.bucket_lock.RLock()
 	defer s.bucket_lock.RUnlock()
 
@@ -162,8 +172,8 @@ func (s *GrowableMap[K, V]) Find(item collections.HashItem[collections.KeyValue[
 }
 
 // Read returns an iterator that reads the items in the set.
-func (s *GrowableMap[K, V]) Read() iter.Seq[collections.HashItem[collections.KeyValue[K, V]]] {
-	return func(yield func(collections.HashItem[collections.KeyValue[K, V]]) bool) {
+func (s *GrowableMap[K, V]) Read() iter.Seq[fixed.KeyValue[K, V]] {
+	return func(yield func(fixed.KeyValue[K, V]) bool) {
 		s.bucket_lock.RLock()
 		defer s.bucket_lock.RUnlock()
 
@@ -178,7 +188,7 @@ func (s *GrowableMap[K, V]) Read() iter.Seq[collections.HashItem[collections.Key
 }
 
 // Range calls the yield function for each item in the set.
-func (s *GrowableMap[K, V]) Range(yield func(item collections.HashItem[collections.KeyValue[K, V]]) bool) {
+func (s *GrowableMap[K, V]) Range(yield func(item fixed.KeyValue[K, V]) bool) {
 	iterators.RangeCol(s, yield)
 }
 

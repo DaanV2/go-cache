@@ -5,9 +5,22 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/daanv2/go-cache/collections"
+	"github.com/daanv2/go-cache/pkg/collections"
 	"github.com/daanv2/go-optimal/pkg/cpu"
 )
+
+type GetOrAdd[T any] interface {
+	GetOrAdd(item T) (T, bool)
+}
+
+type Map[K, V any] interface {
+	Set(key K, value V) bool
+}
+
+type KeyValue[K, V any] interface {
+	GetKey() K
+	GetValue() V
+}
 
 func CacheTargets() []cpu.CacheKind {
 	return []cpu.CacheKind{cpu.CacheL1}
@@ -18,7 +31,7 @@ var (
 	buffer = max(procs, 1000)
 )
 
-func PumpConcurrentSet[T any](set collections.Set[T], items []T) {
+func PumpConcurrentSet[T any](set GetOrAdd[T], items []T) {
 	wg := &sync.WaitGroup{}
 	pump := make(chan T, buffer)
 
@@ -33,16 +46,16 @@ func PumpConcurrentSet[T any](set collections.Set[T], items []T) {
 	wg.Wait()
 }
 
-func PumpConcurrentMap[K, V comparable](set collections.Map[K, V], items []collections.KeyValue[K, V]) {
+func PumpConcurrentMap[K, V comparable](set Map[K, V], items []KeyValue[K, V]) {
 	wg := &sync.WaitGroup{}
-	pump := make(chan collections.KeyValue[K, V], buffer)
+	pump := make(chan KeyValue[K, V], buffer)
 
 	go transferThenClose(pump, items)
 
 	for range procs {
 		wg.Add(1)
 
-		go PumpIntoSyncedMap(wg, set, pump)
+		go PumpIntoSyncedMap[K, V](wg, set, pump)
 	}
 
 	wg.Wait()
@@ -71,31 +84,31 @@ func transfer[T any](wg *sync.WaitGroup, pump chan<- T, items []T) {
 	}
 }
 
-func PumpSyncSet[T any](set collections.Set[T], items []T) {
+func PumpSyncSet[T any](set GetOrAdd[T], items []T) {
 	for _, item := range items {
 		_, _ = set.GetOrAdd(item)
 	}
 }
 
-func PumpSyncMap[K, V comparable](set collections.Map[K, V], items []collections.KeyValue[K, V]) {
+func PumpSyncMap[K, V comparable](set Map[K, V], items []KeyValue[K, V]) {
 	for _, item := range items {
-		_ = set.Set(item.Key(), item.Value())
+		_ = set.Set(item.GetKey(), item.GetValue())
 	}
 }
 
-func PumpIntoSet[T any](set collections.Set[T], pump <-chan T) {
+func PumpIntoSet[T any](set GetOrAdd[T], pump <-chan T) {
 	for item := range pump {
 		_, _ = set.GetOrAdd(item)
 	}
 }
 
-func PumpIntoMap[K, V comparable](set collections.Map[K, V], pump <-chan collections.KeyValue[K, V]) {
+func PumpIntoMap[K, V comparable](set Map[K, V], pump <-chan KeyValue[K, V]) {
 	for item := range pump {
-		_ = set.Set(item.Key(), item.Value())
+		_ = set.Set(item.GetKey(), item.GetValue())
 	}
 }
 
-func Validate[T comparable](t *testing.B, set collections.Set[T], items []T) {
+func Validate[T comparable](t *testing.B, set collections.Readable[T], items []T) {
 	check := make(map[T]bool, len(items))
 
 	for item := range set.Read() {
@@ -132,13 +145,13 @@ func ReportAdd(t *testing.B, size uint64) {
 	t.ReportMetric(ns, "ns")
 }
 
-func PumpIntoSyncedSet[T any](wg *sync.WaitGroup, set collections.Set[T], pump <-chan T) {
+func PumpIntoSyncedSet[T any](wg *sync.WaitGroup, set GetOrAdd[T], pump <-chan T) {
 	defer wg.Done()
 
 	PumpIntoSet(set, pump)
 }
 
-func PumpIntoSyncedMap[K, V comparable](wg *sync.WaitGroup, set collections.Map[K, V], pump <-chan collections.KeyValue[K, V]) {
+func PumpIntoSyncedMap[K, V comparable](wg *sync.WaitGroup, set Map[K, V], pump <-chan KeyValue[K, V]) {
 	defer wg.Done()
 
 	PumpIntoMap(set, pump)
