@@ -1,4 +1,4 @@
-package large
+package maps
 
 import (
 	"fmt"
@@ -6,7 +6,6 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/daanv2/go-cache/fixed"
 	"github.com/daanv2/go-cache/pkg/collections"
 	"github.com/daanv2/go-cache/pkg/hash"
 	"github.com/daanv2/go-cache/pkg/iterators"
@@ -15,16 +14,16 @@ import (
 )
 
 // BuckettedSet is a set of items, that uses a pre-defined amount of buckets, each item generates an hash, from which a bucket can be specified
-type BuckettedMap[K, V comparable] struct {
+type Bucketted[K, V comparable] struct {
 	hasher hash.Hasher[K]
 	sets   []*GrowableMap[K, V]
 	base   Options
 }
 
-// NewBuckettedMap creates a new BuckettedMap with the specified capacity, hasher, and options.
-// The BuckettedMap is a concurrent map that uses a bucketing strategy to reduce contention.
-func NewBuckettedMap[K, V comparable](capacity uint64, keyhasher hash.Hasher[K], opts ...options.Option[Options]) (*BuckettedMap[K, V], error) {
-	base, err := CreateOptions[fixed.KeyValue[K, V]](opts...)
+// NewBuckettedMap creates a new Bucketted with the specified capacity, hasher, and options.
+// The Bucketted is a concurrent map that uses a bucketing strategy to reduce contention.
+func NewBuckettedMap[K, V comparable](capacity uint64, keyhasher hash.Hasher[K], opts ...options.Option[Options]) (*Bucketted[K, V], error) {
+	base, err := CreateOptions[KeyValue[K, V]](opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +33,7 @@ func NewBuckettedMap[K, V comparable](capacity uint64, keyhasher hash.Hasher[K],
 		buckets = base.BucketAmount(capacity)
 	}
 
-	set := &BuckettedMap[K, V]{
+	set := &Bucketted[K, V]{
 		hasher: keyhasher,
 		sets:   make([]*GrowableMap[K, V], 0, buckets),
 		base:   base,
@@ -52,51 +51,51 @@ func NewBuckettedMap[K, V comparable](capacity uint64, keyhasher hash.Hasher[K],
 	return set, nil
 }
 
-// Get retrieves the value for the specified key from the BuckettedMap.
-func (m *BuckettedMap[K, V]) Get(key K) (fixed.KeyValue[K, V], bool) {
+// Get retrieves the value for the specified key from the Bucketted.
+func (m *Bucketted[K, V]) Get(key K) (KeyValue[K, V], bool) {
 	h := m.hasher.Hash(key)
-	kv := fixed.NewKey[K, V](h, key)
+	kv := NewKey[K, V](h, key)
 	bucket := m.bucketIndex(kv)
 	v, ok := m.sets[bucket].Find(kv)
 	if ok {
 		return v, true
 	}
 
-	return fixed.EmptyKeyValue[K, V](), false
+	return EmptyKeyValue[K, V](), false
 }
 
-// Set will add or update the value for the specified key in the BuckettedMap. It returns true if the value was added, false if it was updated.
-func (m *BuckettedMap[K, V]) Set(key K, item V) bool {
+// Set will add or update the value for the specified key in the Bucketted. It returns true if the value was added, false if it was updated.
+func (m *Bucketted[K, V]) Set(key K, item V) bool {
 	h := m.hasher.Hash(key)
-	kv := fixed.NewKeyValue(h, key, item)
+	kv := NewKeyValue(h, key, item)
 	bucket := m.bucketIndex(kv)
 	return m.sets[bucket].updateOrAdd(kv)
 }
 
-// Append adds all items from the specified Rangeable to the BuckettedMap.
-func (m *BuckettedMap[K, V]) Append(other collections.Rangeable[fixed.KeyValue[K, V]]) {
-	other.Range(func(item fixed.KeyValue[K, V]) bool {
+// Append adds all items from the specified Rangeable to the Bucketted.
+func (m *Bucketted[K, V]) Append(other collections.Rangeable[KeyValue[K, V]]) {
+	other.Range(func(item KeyValue[K, V]) bool {
 		m.Set(item.Key, item.Value)
 		return true
 	})
 }
 
-// AppendParralel adds all items from the specified ParralelRangeable to the BuckettedMap.
-func (m *BuckettedMap[K, V]) AppendParralel(other collections.ParralelRangeable[fixed.KeyValue[K, V]]) {
-	other.RangeParralel(func(item fixed.KeyValue[K, V]) bool {
+// AppendParralel adds all items from the specified ParralelRangeable to the Bucketted.
+func (m *Bucketted[K, V]) AppendParralel(other collections.ParralelRangeable[KeyValue[K, V]]) {
+	other.RangeParralel(func(item KeyValue[K, V]) bool {
 		m.Set(item.Key, item.Value)
 		return true
 	})
 }
 
 // bucketIndex returns the index of the bucket that the item should be placed in
-func (s *BuckettedMap[K, V]) bucketIndex(item fixed.KeyValue[K, V]) uint64 {
+func (s *Bucketted[K, V]) bucketIndex(item KeyValue[K, V]) uint64 {
 	return item.Hash % uint64(len(s.sets))
 }
 
 // Read will return a sequence of all items in the set
-func (s *BuckettedMap[K, V]) Read() iter.Seq[fixed.KeyValue[K, V]] {
-	return func(yield func(fixed.KeyValue[K, V]) bool) {
+func (s *Bucketted[K, V]) Read() iter.Seq[KeyValue[K, V]] {
+	return func(yield func(KeyValue[K, V]) bool) {
 		for _, b := range s.sets {
 			for item := range b.Read() {
 				if !yield(item) {
@@ -108,7 +107,7 @@ func (s *BuckettedMap[K, V]) Read() iter.Seq[fixed.KeyValue[K, V]] {
 }
 
 // Keys will return a sequence of all items in the set
-func (s *BuckettedMap[K, V]) Keys() iter.Seq[K] {
+func (s *Bucketted[K, V]) Keys() iter.Seq[K] {
 	return func(yield func(K) bool) {
 		for _, b := range s.sets {
 			for item := range b.Read() {
@@ -121,7 +120,7 @@ func (s *BuckettedMap[K, V]) Keys() iter.Seq[K] {
 }
 
 // Values will return a sequence of all items in the set
-func (s *BuckettedMap[K, V]) Values() iter.Seq[V] {
+func (s *Bucketted[K, V]) Values() iter.Seq[V] {
 	return func(yield func(V) bool) {
 		for _, b := range s.sets {
 			for item := range b.Read() {
@@ -134,7 +133,7 @@ func (s *BuckettedMap[K, V]) Values() iter.Seq[V] {
 }
 
 // KeyValues will return a sequence of all items in the set
-func (s *BuckettedMap[K, V]) KeyValues() iter.Seq2[K, V] {
+func (s *Bucketted[K, V]) KeyValues() iter.Seq2[K, V] {
 	return func(yield func(K, V) bool) {
 		for _, b := range s.sets {
 			for item := range b.Read() {
@@ -147,25 +146,25 @@ func (s *BuckettedMap[K, V]) KeyValues() iter.Seq2[K, V] {
 }
 
 // Range will iterate over all items in the set
-func (s *BuckettedMap[K, V]) Range(yield func(item fixed.KeyValue[K, V]) bool) {
+func (s *Bucketted[K, V]) Range(yield func(item KeyValue[K, V]) bool) {
 	iterators.RangeCol(s, yield)
 }
 
 // RangeParralel will iterate over all items in the set in parallel
-func (s *BuckettedMap[K, V]) RangeParralel(yield func(item fixed.KeyValue[K, V]) bool) {
+func (s *Bucketted[K, V]) RangeParralel(yield func(item KeyValue[K, V]) bool) {
 	iterators.RangeColParralel(s.sets, yield)
 }
 
-func (s *BuckettedMap[K, V]) String() string {
-	return fmt.Sprintf("large.BuckettedSet[%s]", generics.NameOf[fixed.KeyValue[K, V]]())
+func (s *Bucketted[K, V]) String() string {
+	return fmt.Sprintf("large.BuckettedSet[%s]", generics.NameOf[KeyValue[K, V]]())
 }
 
-func (s *BuckettedMap[K, V]) GoString() string {
+func (s *Bucketted[K, V]) GoString() string {
 	return s.String()
 }
 
 // Grow will increase the capacity of the set
-func (m *BuckettedMap[K, V]) Grow(new_capacity uint64) {
+func (m *Bucketted[K, V]) Grow(new_capacity uint64) {
 	buckets := m.base.BucketAmount(new_capacity)
 	current := uint64(len(m.sets))
 	if current >= buckets {
@@ -211,10 +210,10 @@ func (m *BuckettedMap[K, V]) Grow(new_capacity uint64) {
 	wg.Wait()
 }
 
-func workerMapGrow[K, V comparable](wg *sync.WaitGroup, process <-chan *GrowableMap[K, V], receiver *BuckettedMap[K, V]) {
+func workerMapGrow[K, V comparable](wg *sync.WaitGroup, process <-chan *GrowableMap[K, V], receiver *Bucketted[K, V]) {
 	defer wg.Done()
 	for s := range process {
-		s.Range(func(item fixed.KeyValue[K, V]) bool {
+		s.Range(func(item KeyValue[K, V]) bool {
 			_ = receiver.Set(item.Key, item.Value)
 			return true
 		})

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/daanv2/go-cache/large"
 	"github.com/daanv2/go-cache/pkg/collections"
+	"github.com/daanv2/go-cache/sets"
 	"github.com/daanv2/go-cache/test/benchmarks"
 	test_util "github.com/daanv2/go-cache/test/util"
 	"github.com/stretchr/testify/require"
@@ -16,7 +16,7 @@ func Test_GrowableSet(t *testing.T) {
 
 	for _, size := range sizes {
 		t.Run(fmt.Sprintf("Concurrency(%v)", size), func(t *testing.T) {
-			col, err := large.NewGrowableSet[*test_util.TestItem](test_util.Hasher())
+			col, err := sets.NewGrowableSet[*test_util.TestItem](test_util.Hasher())
 			require.NoError(t, err)
 
 			items := test_util.Generate(size)
@@ -35,7 +35,7 @@ func Test_GrowableSet_Concurrency(t *testing.T) {
 	sizes := []int{100, 200, 300, 400, 1000, 10000, 20000}
 
 	test_util.Case1(sizes, func(size int) {
-		col, err := large.NewGrowableSet[*test_util.TestItem](test_util.Hasher())
+		col, err := sets.NewGrowableSet[*test_util.TestItem](test_util.Hasher())
 		require.NoError(t, err)
 
 		items := test_util.Generate(size)

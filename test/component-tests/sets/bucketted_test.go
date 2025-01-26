@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/daanv2/go-cache/large"
 	"github.com/daanv2/go-cache/pkg/collections"
+	"github.com/daanv2/go-cache/sets"
 	"github.com/daanv2/go-cache/test/benchmarks"
 	test_util "github.com/daanv2/go-cache/test/util"
 	"github.com/stretchr/testify/require"
@@ -15,7 +15,7 @@ func Test_BuckettedSet(t *testing.T) {
 	sizes := []uint64{100, 200, 300, 400, 1000, 10000, 20000}
 
 	test_util.Case1(sizes, func(size uint64) {
-		col, err := large.NewBuckettedSet[*test_util.TestItem](size*10, test_util.Hasher())
+		col, err := sets.NewBuckettedSet[*test_util.TestItem](size*10, test_util.Hasher())
 		require.NoError(t, err)
 
 		items := test_util.Generate(int(size))
@@ -35,7 +35,7 @@ func Test_BuckettedSet_Concurrency(t *testing.T) {
 	sizes := []uint64{100, 200, 300, 400, 1000, 10000, 20000}
 
 	test_util.Case1(sizes, func(size uint64) {
-		col, err := large.NewBuckettedSet[*test_util.TestItem](size*10, test_util.Hasher())
+		col, err := sets.NewBuckettedSet[*test_util.TestItem](size*10, test_util.Hasher())
 		require.NoError(t, err)
 
 		items := test_util.Generate(int(size))

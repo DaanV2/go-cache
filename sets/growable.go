@@ -1,4 +1,4 @@
-package large
+package sets
 
 import (
 	"errors"
@@ -6,7 +6,6 @@ import (
 	"iter"
 	"sync"
 
-	"github.com/daanv2/go-cache/fixed"
 	"github.com/daanv2/go-cache/pkg/hash"
 	"github.com/daanv2/go-cache/pkg/iterators"
 	"github.com/daanv2/go-cache/pkg/options"
@@ -18,7 +17,7 @@ import (
 type GrowableSet[T comparable] struct {
 	Options
 	hasher      hash.Hasher[T]
-	buckets     []*fixed.Set[T]
+	buckets     []*Fixed[T]
 	bucket_lock sync.RWMutex
 }
 
@@ -50,26 +49,26 @@ func NewGrowableSetFrom[T comparable](hasher hash.Hasher[T], base Options) (*Gro
 	return &GrowableSet[T]{
 		Options:     base,
 		hasher:      hasher,
-		buckets:     make([]*fixed.Set[T], 0),
+		buckets:     make([]*Fixed[T], 0),
 		bucket_lock: sync.RWMutex{},
 	}, nil
 }
 
 // GetOrAdd returns the item if it exists in the set, otherwise it adds it and returns it.
 func (s *GrowableSet[T]) GetOrAdd(item T) (T, bool) {
-	setitem := fixed.NewSetItem[T](s.hasher.Hash(item), item)
+	setitem := NewSetItem[T](s.hasher.Hash(item), item)
 
 	return s.getOrAdd(setitem)
 }
 
 // UpdateOrAdd updates the item if it exists in the set, otherwise it adds it. Returns true if it had to add it instead of update.
 func (s *GrowableSet[T]) UpdateOrAdd(item T) bool {
-	setitem := fixed.NewSetItem[T](s.hasher.Hash(item), item)
+	setitem := NewSetItem[T](s.hasher.Hash(item), item)
 
 	return s.updateOrAdd(setitem)
 }
 
-func (s *GrowableSet[T]) getOrAdd(item fixed.SetItem[T]) (T, bool) {
+func (s *GrowableSet[T]) getOrAdd(item SetItem[T]) (T, bool) {
 	item_lock := s.items_lock.GetLock(item.Hash)
 
 	item_lock.Lock()
@@ -98,7 +97,7 @@ func (s *GrowableSet[T]) getOrAdd(item fixed.SetItem[T]) (T, bool) {
 }
 
 // updateOrAdd TODO. return true if it had to add it instead of update
-func (s *GrowableSet[T]) updateOrAdd(item fixed.SetItem[T]) bool {
+func (s *GrowableSet[T]) updateOrAdd(item SetItem[T]) bool {
 	item_lock := s.items_lock.GetLock(item.Hash)
 
 	item_lock.Lock()
@@ -114,7 +113,7 @@ func (s *GrowableSet[T]) updateOrAdd(item fixed.SetItem[T]) bool {
 	return true
 }
 
-func (s *GrowableSet[T]) updateIf(item fixed.SetItem[T]) bool {
+func (s *GrowableSet[T]) updateIf(item SetItem[T]) bool {
 	s.bucket_lock.RLock()
 	defer s.bucket_lock.RUnlock()
 
@@ -141,7 +140,7 @@ func (s *GrowableSet[T]) updateIf(item fixed.SetItem[T]) bool {
 	return false
 }
 
-func (s *GrowableSet[T]) set(item fixed.SetItem[T]) {
+func (s *GrowableSet[T]) set(item SetItem[T]) {
 	s.bucket_lock.Lock()
 	defer s.bucket_lock.Unlock()
 
@@ -153,7 +152,7 @@ func (s *GrowableSet[T]) set(item fixed.SetItem[T]) {
 	}
 
 	for {
-		b := fixed.NewSet[T](s.Options.bucket_size)
+		b := NewFixed[T](s.Options.bucket_size)
 		s.buckets = append(s.buckets, &b)
 		if s.buckets[len(s.buckets)-1].Set(item) {
 			return
@@ -161,7 +160,7 @@ func (s *GrowableSet[T]) set(item fixed.SetItem[T]) {
 	}
 }
 
-func (s *GrowableSet[T]) Find(item fixed.SetItem[T]) (fixed.SetItem[T], bool) {
+func (s *GrowableSet[T]) Find(item SetItem[T]) (SetItem[T], bool) {
 	s.bucket_lock.RLock()
 	defer s.bucket_lock.RUnlock()
 

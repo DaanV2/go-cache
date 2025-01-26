@@ -1,4 +1,4 @@
-package fixed
+package maps
 
 import (
 	"iter"
@@ -7,16 +7,16 @@ import (
 	"github.com/daanv2/go-cache/pkg/hash"
 )
 
-// Map is a fixed size slice, that can be used to store a fixed amount of items
-type Map[K, V comparable] struct {
+// Fixed is a fixed size slice, that can be used to store a fixed amount of items
+type Fixed[K, V comparable] struct {
 	amount    uint64
 	hashrange hash.Range
 	items     []KeyValue[K, V] // The items in the slice
 	lock      sync.RWMutex     // The lock to protect the slice
 }
 
-func NewMap[K, V comparable](amount uint64) Map[K, V] {
-	return Map[K, V]{
+func NewFixed[K, V comparable](amount uint64) Fixed[K, V] {
+	return Fixed[K, V]{
 		amount:    amount,
 		items:     make([]KeyValue[K, V], amount),
 		hashrange: hash.NewRange(),
@@ -24,23 +24,23 @@ func NewMap[K, V comparable](amount uint64) Map[K, V] {
 	}
 }
 
-func (s *Map[K, V]) Cap() int {
+func (s *Fixed[K, V]) Cap() int {
 	return cap(s.items)
 }
 
-func (s *Map[K, V]) Len() int {
+func (s *Fixed[K, V]) Len() int {
 	return len(s.items)
 }
 
-func (s *Map[K, V]) HasHash(hash uint64) bool {
+func (s *Fixed[K, V]) HasHash(hash uint64) bool {
 	return s.hashrange.Has(hash)
 }
 
-func (s *Map[K, V]) index(item KeyValue[K, V]) uint64 {
+func (s *Fixed[K, V]) index(item KeyValue[K, V]) uint64 {
 	return item.Hash % s.amount
 }
 
-func (s *Map[K, V]) Get(item KeyValue[K, V]) (KeyValue[K, V], bool) {
+func (s *Fixed[K, V]) Get(item KeyValue[K, V]) (KeyValue[K, V], bool) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -51,7 +51,7 @@ func (s *Map[K, V]) Get(item KeyValue[K, V]) (KeyValue[K, V], bool) {
 	return item, false
 }
 
-func (s *Map[K, V]) get(item KeyValue[K, V]) (KeyValue[K, V], bool) {
+func (s *Fixed[K, V]) get(item KeyValue[K, V]) (KeyValue[K, V], bool) {
 	sindex := s.index(item)
 
 	sub := s.items[sindex:]
@@ -71,15 +71,15 @@ func (s *Map[K, V]) get(item KeyValue[K, V]) (KeyValue[K, V], bool) {
 	return item, false
 }
 
-// Map Add the given item to the set, if equivalant item was overriden, or empty space filled, true is returned
-func (s *Map[K, V]) Set(item KeyValue[K, V]) bool {
+// Fixed Add the given item to the set, if equivalant item was overriden, or empty space filled, true is returned
+func (s *Fixed[K, V]) Set(item KeyValue[K, V]) bool {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	return s.set(item)
 }
 
-func (s *Map[K, V]) set(item KeyValue[K, V]) bool {
+func (s *Fixed[K, V]) set(item KeyValue[K, V]) bool {
 	sindex := s.index(item)
 
 	sub := s.items[sindex:]
@@ -103,14 +103,14 @@ func (s *Map[K, V]) set(item KeyValue[K, V]) bool {
 	return false
 }
 
-func (s *Map[K, V]) Update(item KeyValue[K, V]) bool {
+func (s *Fixed[K, V]) Update(item KeyValue[K, V]) bool {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	return s.update(item)
 }
 
-func (s *Map[K, V]) update(item KeyValue[K, V]) bool {
+func (s *Fixed[K, V]) update(item KeyValue[K, V]) bool {
 	if !s.hashrange.Has(item.Hash) {
 		return false
 	}
@@ -135,7 +135,7 @@ func (s *Map[K, V]) update(item KeyValue[K, V]) bool {
 	return false
 }
 
-func (s *Map[K, V]) Read() iter.Seq[KeyValue[K, V]] {
+func (s *Fixed[K, V]) Read() iter.Seq[KeyValue[K, V]] {
 	return func(yield func(KeyValue[K, V]) bool) {
 		s.lock.RLock()
 		defer s.lock.RUnlock()
