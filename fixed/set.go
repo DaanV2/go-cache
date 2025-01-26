@@ -4,7 +4,6 @@ import (
 	"iter"
 	"sync"
 
-	"github.com/daanv2/go-cache/collections"
 	"github.com/daanv2/go-cache/pkg/bloomfilters"
 )
 
@@ -12,14 +11,14 @@ import (
 type Set[T comparable] struct {
 	amount    uint64
 	hashrange *bloomfilters.Cheap
-	items     []collections.HashItem[T] // The items in the slice
-	lock      sync.RWMutex              // The lock to protect the slice
+	items     []SetItem[T] // The items in the slice
+	lock      sync.RWMutex // The lock to protect the slice
 }
 
 func NewSet[T comparable](amount uint64) Set[T] {
 	return Set[T]{
 		amount:    amount,
-		items:     make([]collections.HashItem[T], amount),
+		items:     make([]SetItem[T], amount),
 		hashrange: bloomfilters.NewCheap(amount),
 		lock:      sync.RWMutex{},
 	}
@@ -37,11 +36,11 @@ func (s *Set[T]) HasHash(hash uint64) bool {
 	return s.hashrange.Has(hash)
 }
 
-func (s *Set[T]) index(item collections.HashItem[T]) uint64 {
+func (s *Set[T]) index(item SetItem[T]) uint64 {
 	return item.Hash % s.amount
 }
 
-func (s *Set[T]) Get(item collections.HashItem[T]) (collections.HashItem[T], bool) {
+func (s *Set[T]) Get(item SetItem[T]) (SetItem[T], bool) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -52,7 +51,7 @@ func (s *Set[T]) Get(item collections.HashItem[T]) (collections.HashItem[T], boo
 	return item, false
 }
 
-func (s *Set[T]) get(item collections.HashItem[T]) (collections.HashItem[T], bool) {
+func (s *Set[T]) get(item SetItem[T]) (SetItem[T], bool) {
 	sindex := s.index(item)
 
 	sub := s.items[sindex:]
@@ -73,22 +72,19 @@ func (s *Set[T]) get(item collections.HashItem[T]) (collections.HashItem[T], boo
 }
 
 // Set Add the given item to the set, if equivalant item was overriden, or empty space filled, true is returned
-func (s *Set[T]) Set(item collections.HashItem[T]) bool {
+func (s *Set[T]) Set(item SetItem[T]) bool {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	return s.set(item)
 }
 
-func (s *Set[T]) set(item collections.HashItem[T]) bool {
+func (s *Set[T]) set(item SetItem[T]) bool {
 	sindex := s.index(item)
 
 	sub := s.items[sindex:]
 	for i, v := range sub {
-		if v.Hash == item.Hash && v.Value == item.Value {
-			sub[i] = item
-			return true
-		} else if v.IsEmpty() {
+		if (v.Hash == item.Hash && v.Value == item.Value) || v.IsEmpty() {
 			sub[i] = item
 			s.hashrange.Set(item.Hash)
 			return true
@@ -97,10 +93,7 @@ func (s *Set[T]) set(item collections.HashItem[T]) bool {
 
 	sub = s.items[:sindex]
 	for i, v := range sub {
-		if v.Hash == item.Hash && v.Value == item.Value {
-			sub[i] = item
-			return true
-		} else if v.IsEmpty() {
+		if (v.Hash == item.Hash && v.Value == item.Value) || v.IsEmpty() {
 			sub[i] = item
 			s.hashrange.Set(item.Hash)
 			return true
@@ -110,14 +103,14 @@ func (s *Set[T]) set(item collections.HashItem[T]) bool {
 	return false
 }
 
-func (s *Set[T]) Update(item collections.HashItem[T]) bool {
+func (s *Set[T]) Update(item SetItem[T]) bool {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	return s.update(item)
 }
 
-func (s *Set[T]) update(item collections.HashItem[T]) bool {
+func (s *Set[T]) update(item SetItem[T]) bool {
 	sindex := s.index(item)
 	sub := s.items[sindex:]
 	for i, v := range sub {
@@ -138,8 +131,8 @@ func (s *Set[T]) update(item collections.HashItem[T]) bool {
 	return false
 }
 
-func (s *Set[T]) Read() iter.Seq[collections.HashItem[T]] {
-	return func(yield func(collections.HashItem[T]) bool) {
+func (s *Set[T]) Read() iter.Seq[SetItem[T]] {
+	return func(yield func(SetItem[T]) bool) {
 		s.lock.RLock()
 		defer s.lock.RUnlock()
 

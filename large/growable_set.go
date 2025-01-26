@@ -6,7 +6,6 @@ import (
 	"iter"
 	"sync"
 
-	"github.com/daanv2/go-cache/collections"
 	"github.com/daanv2/go-cache/fixed"
 	"github.com/daanv2/go-cache/pkg/hash"
 	"github.com/daanv2/go-cache/pkg/iterators"
@@ -58,19 +57,19 @@ func NewGrowableSetFrom[T comparable](hasher hash.Hasher[T], base Options) (*Gro
 
 // GetOrAdd returns the item if it exists in the set, otherwise it adds it and returns it.
 func (s *GrowableSet[T]) GetOrAdd(item T) (T, bool) {
-	setitem := collections.NewHashItem[T](s.hasher.Hash(item), item)
+	setitem := fixed.NewSetItem[T](s.hasher.Hash(item), item)
 
 	return s.getOrAdd(setitem)
 }
 
 // UpdateOrAdd updates the item if it exists in the set, otherwise it adds it. Returns true if it had to add it instead of update.
 func (s *GrowableSet[T]) UpdateOrAdd(item T) bool {
-	setitem := collections.NewHashItem[T](s.hasher.Hash(item), item)
+	setitem := fixed.NewSetItem[T](s.hasher.Hash(item), item)
 
 	return s.updateOrAdd(setitem)
 }
 
-func (s *GrowableSet[T]) getOrAdd(item collections.HashItem[T]) (T, bool) {
+func (s *GrowableSet[T]) getOrAdd(item fixed.SetItem[T]) (T, bool) {
 	item_lock := s.items_lock.GetLock(item.Hash)
 
 	item_lock.Lock()
@@ -99,7 +98,7 @@ func (s *GrowableSet[T]) getOrAdd(item collections.HashItem[T]) (T, bool) {
 }
 
 // updateOrAdd TODO. return true if it had to add it instead of update
-func (s *GrowableSet[T]) updateOrAdd(item collections.HashItem[T]) bool {
+func (s *GrowableSet[T]) updateOrAdd(item fixed.SetItem[T]) bool {
 	item_lock := s.items_lock.GetLock(item.Hash)
 
 	item_lock.Lock()
@@ -115,7 +114,7 @@ func (s *GrowableSet[T]) updateOrAdd(item collections.HashItem[T]) bool {
 	return true
 }
 
-func (s *GrowableSet[T]) updateIf(item collections.HashItem[T]) bool {
+func (s *GrowableSet[T]) updateIf(item fixed.SetItem[T]) bool {
 	s.bucket_lock.RLock()
 	defer s.bucket_lock.RUnlock()
 
@@ -142,7 +141,7 @@ func (s *GrowableSet[T]) updateIf(item collections.HashItem[T]) bool {
 	return false
 }
 
-func (s *GrowableSet[T]) set(item collections.HashItem[T]) {
+func (s *GrowableSet[T]) set(item fixed.SetItem[T]) {
 	s.bucket_lock.Lock()
 	defer s.bucket_lock.Unlock()
 
@@ -162,7 +161,7 @@ func (s *GrowableSet[T]) set(item collections.HashItem[T]) {
 	}
 }
 
-func (s *GrowableSet[T]) Find(item collections.HashItem[T]) (collections.HashItem[T], bool) {
+func (s *GrowableSet[T]) Find(item fixed.SetItem[T]) (fixed.SetItem[T], bool) {
 	s.bucket_lock.RLock()
 	defer s.bucket_lock.RUnlock()
 
