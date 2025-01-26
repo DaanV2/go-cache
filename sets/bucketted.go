@@ -1,4 +1,4 @@
-package large
+package sets
 
 import (
 	"fmt"
@@ -6,7 +6,6 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/daanv2/go-cache/fixed"
 	"github.com/daanv2/go-cache/pkg/hash"
 	"github.com/daanv2/go-cache/pkg/iterators"
 	"github.com/daanv2/go-cache/pkg/options"
@@ -56,24 +55,24 @@ func (s *BuckettedSet[T]) GetOptions() Options {
 
 // GetOrAdd will return the item if it exists, otherwise it will add the item to the set
 func (s *BuckettedSet[T]) GetOrAdd(item T) (T, bool) {
-	setitem := fixed.NewSetItem[T](s.hasher.Hash(item), item)
+	setitem := NewSetItem[T](s.hasher.Hash(item), item)
 	bucket := s.bucketIndex(setitem)
 	return s.sets[bucket].getOrAdd(setitem)
 }
 
 // UpdateOrAdd will update the item if it exists, otherwise it will add the item to the set, and return true if it had to add it
 func (s *BuckettedSet[T]) UpdateOrAdd(item T) bool {
-	setitem := fixed.NewSetItem[T](s.hasher.Hash(item), item)
+	setitem := NewSetItem[T](s.hasher.Hash(item), item)
 	return s.updateOrAdd(setitem)
 }
 
-func (s *BuckettedSet[T]) updateOrAdd(item fixed.SetItem[T]) bool {
+func (s *BuckettedSet[T]) updateOrAdd(item SetItem[T]) bool {
 	bucket := s.bucketIndex(item)
 	return s.sets[bucket].updateOrAdd(item)
 }
 
 // bucketIndex returns the index of the bucket that the item should be placed in
-func (s *BuckettedSet[T]) bucketIndex(item fixed.SetItem[T]) uint64 {
+func (s *BuckettedSet[T]) bucketIndex(item SetItem[T]) uint64 {
 	return item.Hash % uint64(len(s.sets))
 }
 

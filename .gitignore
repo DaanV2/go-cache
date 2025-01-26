@@ -2,5 +2,6 @@
 *.exe
 *.S
 *.pprof
+*.log
 
 reports/coverage.out

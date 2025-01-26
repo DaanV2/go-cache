@@ -1,16 +1,16 @@
-package fixed_test
+package slices_test
 
 import (
 	"sync"
 	"sync/atomic"
 	"testing"
 
-	"github.com/daanv2/go-cache/fixed"
+	"github.com/daanv2/go-cache/slices"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_Slice(t *testing.T) {
-	col := fixed.NewSlice[int32](7)
+	col := slices.NewFixed[int32](7)
 
 	require.Equal(t, col.Cap(), 7)
 	require.Equal(t, col.UnsafeCap(), 7)
@@ -41,7 +41,7 @@ func Test_Slice(t *testing.T) {
 }
 
 func Test_Slice_Parralel(t *testing.T) {
-	col := fixed.NewSlice[int32](90)
+	col := slices.NewFixed[int32](90)
 	wg := sync.WaitGroup{}
 
 	adds := make(chan int, 200)

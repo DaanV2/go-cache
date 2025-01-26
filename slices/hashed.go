@@ -1,28 +1,31 @@
-package fixed
+package slices
 
 import (
 	"fmt"
 	"iter"
 	"sync"
 
+	"github.com/daanv2/go-cache/pkg/hash"
 	"github.com/daanv2/go-kit/generics"
 )
 
-// Slice is a fixed size slice, that can be used to store a fixed amount of items
-type Slice[T any] struct {
-	items []T          // The items in the slice
-	lock  sync.RWMutex // The lock to protect the slice
+// FixedHashed is a fixed size slice, that can be used to store a fixed amount of items
+type FixedHashed[T hash.Hashed] struct {
+	items     []T          // The items in the slice
+	lock      sync.RWMutex // The lock to protect the slic	e
+	hashrange hash.Range
 }
 
 // Creates a new slice of fixed sized, if its full nothing can be added
-func NewSlice[T any](amount int) Slice[T] {
-	return Slice[T]{
-		items: make([]T, 0, amount),
+func NewFixedHashed[T hash.Hashed](amount int) FixedHashed[T] {
+	return FixedHashed[T]{
+		items:     make([]T, 0, amount),
+		hashrange: hash.NewRange(),
 	}
 }
 
 // Cap returns the capacity of the slice
-func (s *Slice[T]) Cap() int {
+func (s *FixedHashed[T]) Cap() int {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -30,12 +33,12 @@ func (s *Slice[T]) Cap() int {
 }
 
 // UnsafeCap returns the capacity of the slice without locking
-func (s *Slice[T]) UnsafeCap() int {
+func (s *FixedHashed[T]) UnsafeCap() int {
 	return cap(s.items)
 }
 
 // Len returns the amount of items in the slice
-func (s *Slice[T]) Len() int {
+func (s *FixedHashed[T]) Len() int {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -43,12 +46,12 @@ func (s *Slice[T]) Len() int {
 }
 
 // UnsafeLen returns the amount of items in the slice without locking
-func (s *Slice[T]) UnsafeLen() int {
+func (s *FixedHashed[T]) UnsafeLen() int {
 	return len(s.items)
 }
 
 // SpaceLeft returns the amount of space left in the slice
-func (s *Slice[T]) SpaceLeft() int {
+func (s *FixedHashed[T]) SpaceLeft() int {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -56,22 +59,22 @@ func (s *Slice[T]) SpaceLeft() int {
 }
 
 // UnsafeSpaceLeft returns the amount of space left in the slice without locking
-func (s *Slice[T]) UnsafeSpaceLeft() int {
+func (s *FixedHashed[T]) UnsafeSpaceLeft() int {
 	return cap(s.items) - len(s.items)
 }
 
 // IsFull returns if the slice is full
-func (s *Slice[T]) IsFull() bool {
+func (s *FixedHashed[T]) IsFull() bool {
 	return s.SpaceLeft() == 0
 }
 
 // UnsafeIsFull returns if the slice is full without locking
-func (s *Slice[T]) UnsafeIsFull() bool {
+func (s *FixedHashed[T]) UnsafeIsFull() bool {
 	return s.UnsafeSpaceLeft() == 0
 }
 
 // Get returns the item at the given index, and if it exists
-func (s *Slice[T]) Get(index int) (T, bool) {
+func (s *FixedHashed[T]) Get(index int) (T, bool) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -79,7 +82,7 @@ func (s *Slice[T]) Get(index int) (T, bool) {
 }
 
 // UnsafeGet returns the item at the given index, and if it exists without locking
-func (s *Slice[T]) UnsafeGet(index int) (T, bool) {
+func (s *FixedHashed[T]) UnsafeGet(index int) (T, bool) {
 	if index >= len(s.items) {
 		return generics.Empty[T](), false
 	}
@@ -88,7 +91,7 @@ func (s *Slice[T]) UnsafeGet(index int) (T, bool) {
 }
 
 // Set will set the item at the given index, and return if it was successful
-func (s *Slice[T]) Set(index int, value T) bool {
+func (s *FixedHashed[T]) Set(index int, value T) bool {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -96,17 +99,23 @@ func (s *Slice[T]) Set(index int, value T) bool {
 }
 
 // UnsafeSet will set the item at the given index, and return if it was successful without locking
-func (s *Slice[T]) UnsafeSet(index int, value T) bool {
+func (s *FixedHashed[T]) UnsafeSet(index int, value T) bool {
 	if index >= len(s.items) {
 		return false
 	}
 
+	old := s.items[index]
 	s.items[index] = value
+
+	if old.Hash() != value.Hash() {
+		s.Rehash()
+	}
+
 	return true
 }
 
 // Clear will remove all items from the slice
-func (s *Slice[T]) Clear() {
+func (s *FixedHashed[T]) Clear() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -114,7 +123,7 @@ func (s *Slice[T]) Clear() {
 }
 
 // Delete will remove the item at the given index, and return if it was successful
-func (s *Slice[T]) Delete(index int) bool {
+func (s *FixedHashed[T]) Delete(index int) bool {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -122,17 +131,18 @@ func (s *Slice[T]) Delete(index int) bool {
 }
 
 // UnsafeDelete will remove the item at the given index, and return if it was successful without locking
-func (s *Slice[T]) UnsafeDelete(index int) bool {
+func (s *FixedHashed[T]) UnsafeDelete(index int) bool {
 	if index >= len(s.items) {
 		return false
 	}
 
 	s.items = append(s.items[:index], s.items[index+1:]...)
+	s.Rehash()
 	return true
 }
 
 // DeleteFunc will remove the all item that matches the predicate, and return the amount of items removed
-func (s *Slice[T]) DeleteFunc(predicate func(v T) bool) int {
+func (s *FixedHashed[T]) DeleteFunc(predicate func(v T) bool) int {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	amount := 0
@@ -143,12 +153,13 @@ func (s *Slice[T]) DeleteFunc(predicate func(v T) bool) int {
 			amount++
 		}
 	}
+	s.Rehash()
 
 	return amount
 }
 
 // Find will return the first item that matches the predicate, and if it was found
-func (s *Slice[T]) Find(predicate func(v T) bool) (T, bool) {
+func (s *FixedHashed[T]) Find(predicate func(v T) bool) (T, bool) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -162,7 +173,7 @@ func (s *Slice[T]) Find(predicate func(v T) bool) (T, bool) {
 }
 
 // FindIndex will return the index of the first item that matches the predicate, and if it was found
-func (s *Slice[T]) FindIndex(predicate func(v T) bool) (int, bool) {
+func (s *FixedHashed[T]) FindIndex(predicate func(v T) bool) (int, bool) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -178,7 +189,7 @@ func (s *Slice[T]) FindIndex(predicate func(v T) bool) (int, bool) {
 // TryAppend will check how much space is left, and attempt to write as much as possible from the given data into its own buffer
 //
 // If you have 5 items, and there is room for 3, it will return 3, and has added 3 items to its buffer
-func (s *Slice[T]) TryAppend(items ...T) int {
+func (s *FixedHashed[T]) TryAppend(items ...T) int {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -191,12 +202,16 @@ func (s *Slice[T]) TryAppend(items ...T) int {
 		items = items[:space]
 	}
 
-	s.items = append(s.items, items...)
+	for _, item := range items {
+		s.items = append(s.items, item)
+		s.hashrange.Update(item.Hash())
+	}
+
 	return len(items)
 }
 
 // Read will return a sequence of the items in the slice
-func (s *Slice[T]) Read() iter.Seq[T] {
+func (s *FixedHashed[T]) Read() iter.Seq[T] {
 	return func(yield func(T) bool) {
 		s.lock.RLock()
 		defer s.lock.RUnlock()
@@ -209,13 +224,28 @@ func (s *Slice[T]) Read() iter.Seq[T] {
 	}
 }
 
-func (s *Slice[T]) String() string {
+func (s *FixedHashed[T]) Rehash() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	nr := hash.NewRange()
+	for _, item := range s.items {
+		nr.Update(item.Hash())
+	}
+	s.hashrange = nr
+}
+
+func (s *FixedHashed[T]) HasHash(v uint64) bool {
+	return s.hashrange.Has(v)
+}
+
+func (s *FixedHashed[T]) String() string {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	return fmt.Sprintf("fixed.Slice[%s,%d/%d]", generics.NameOf[T](), len(s.items), cap(s.items))
+	return fmt.Sprintf("fixed.HashedSlice[%s,%d/%d]", generics.NameOf[T](), len(s.items), cap(s.items))
 }
 
-func (s *Slice[T]) GoString() string {
+func (s *FixedHashed[T]) GoString() string {
 	return s.String()
 }

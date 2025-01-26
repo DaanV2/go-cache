@@ -139,10 +139,10 @@ func Validate[T comparable](t *testing.B, set collections.Readable[T], items []T
 func ReportAdd(t *testing.B, size uint64) {
 	inserts := float64(size) * float64(t.N)
 	ns := float64(t.Elapsed().Nanoseconds())
+	perS := (inserts / ns) * 1e9
 
-	t.ReportMetric(inserts/ns, "inserts/ns")
+	t.ReportMetric(perS, "inserts/s")
 	t.ReportMetric(inserts, "inserts")
-	t.ReportMetric(ns, "ns")
 }
 
 func PumpIntoSyncedSet[T any](wg *sync.WaitGroup, set GetOrAdd[T], pump <-chan T) {

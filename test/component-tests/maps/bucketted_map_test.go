@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/daanv2/go-cache/fixed"
-	"github.com/daanv2/go-cache/large"
+	"github.com/daanv2/go-cache/maps"
 	"github.com/daanv2/go-cache/pkg/collections"
 	"github.com/daanv2/go-cache/pkg/hash"
 	"github.com/daanv2/go-cache/test/benchmarks"
@@ -18,7 +17,7 @@ func Test_BuckettedMap(t *testing.T) {
 	sizes := []uint64{100, 200, 300, 400, 1000}
 
 	test_util.Case1(sizes, func(size uint64) {
-		col, err := large.NewBuckettedMap[int, string](size, hash.IntegerHasher[int](hash.MD5))
+		col, err := maps.NewBuckettedMap[int, string](size, hash.IntegerHasher[int](hash.MD5))
 		require.NoError(t, err)
 
 		items := test_util.Generate(int(size))
@@ -51,7 +50,7 @@ func Test_BuckettedMap_Grow(t *testing.T) {
 	sizes := []uint64{100, 200, 300, 400, 1000}
 
 	test_util.Case1(sizes, func(size uint64) {
-		col, err := large.NewBuckettedMap[int, string](size*10, hash.IntegerHasher[int](hash.MD5))
+		col, err := maps.NewBuckettedMap[int, string](size*10, hash.IntegerHasher[int](hash.MD5))
 		require.NoError(t, err)
 
 		items := test_util.Generate(int(size))
@@ -84,16 +83,16 @@ func Test_BuckettedMap_Concurrency(t *testing.T) {
 	keyhasher := hash.IntegerHasher[int](hash.MD5)
 
 	test_util.Case2(sizes, target, func(size uint64, cache cpu.CacheKind) {
-		col, err := large.NewBuckettedMap[int, string](
+		col, err := maps.NewBuckettedMap[int, string](
 			size*10,
 			hash.IntegerHasher[int](hash.MD5),
-			large.WithCacheTarget[fixed.KeyValue[int, string]](cache),
+			maps.WithCacheTarget[maps.KeyValue[int, string]](cache),
 		)
 		require.NoError(t, err)
 
 		items := make([]benchmarks.KeyValue[int, string], 0, int(size))
 		for _, item := range test_util.Generate(int(size)) {
-			items = append(items, fixed.NewKeyValue[int, string](keyhasher.Hash(item.ID), item.ID, item.Data))
+			items = append(items, maps.NewKeyValue[int, string](keyhasher.Hash(item.ID), item.ID, item.Data))
 		}
 		collections.Shuffle(items)
 
@@ -116,7 +115,7 @@ func Test_BuckettedMap_Debug(t *testing.T) {
 	size := 50_000
 
 	t.Run(fmt.Sprintf("Concurrency(%v)", size), func(t *testing.T) {
-		col, err := large.NewBuckettedMap[int, string](uint64(size), test_util.CheapIntHasher[int]())
+		col, err := maps.NewBuckettedMap[int, string](uint64(size), test_util.CheapIntHasher[int]())
 		require.NoError(t, err)
 
 		items := test_util.Generate(int(size))

@@ -1,4 +1,4 @@
-package fixed
+package sets
 
 import (
 	"iter"
@@ -7,16 +7,16 @@ import (
 	"github.com/daanv2/go-cache/pkg/bloomfilters"
 )
 
-// Set is a fixed size slice, that can be used to store a fixed amount of items
-type Set[T comparable] struct {
+// Fixed is a fixed size slice, that can be used to store a fixed amount of items
+type Fixed[T comparable] struct {
 	amount    uint64
 	hashrange *bloomfilters.Cheap
 	items     []SetItem[T] // The items in the slice
 	lock      sync.RWMutex // The lock to protect the slice
 }
 
-func NewSet[T comparable](amount uint64) Set[T] {
-	return Set[T]{
+func NewFixed[T comparable](amount uint64) Fixed[T] {
+	return Fixed[T]{
 		amount:    amount,
 		items:     make([]SetItem[T], amount),
 		hashrange: bloomfilters.NewCheap(amount),
@@ -24,23 +24,23 @@ func NewSet[T comparable](amount uint64) Set[T] {
 	}
 }
 
-func (s *Set[T]) Cap() int {
+func (s *Fixed[T]) Cap() int {
 	return cap(s.items)
 }
 
-func (s *Set[T]) Len() int {
+func (s *Fixed[T]) Len() int {
 	return len(s.items)
 }
 
-func (s *Set[T]) HasHash(hash uint64) bool {
+func (s *Fixed[T]) HasHash(hash uint64) bool {
 	return s.hashrange.Has(hash)
 }
 
-func (s *Set[T]) index(item SetItem[T]) uint64 {
+func (s *Fixed[T]) index(item SetItem[T]) uint64 {
 	return item.Hash % s.amount
 }
 
-func (s *Set[T]) Get(item SetItem[T]) (SetItem[T], bool) {
+func (s *Fixed[T]) Get(item SetItem[T]) (SetItem[T], bool) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -51,19 +51,19 @@ func (s *Set[T]) Get(item SetItem[T]) (SetItem[T], bool) {
 	return item, false
 }
 
-func (s *Set[T]) get(item SetItem[T]) (SetItem[T], bool) {
+func (s *Fixed[T]) get(item SetItem[T]) (SetItem[T], bool) {
 	sindex := s.index(item)
 
 	sub := s.items[sindex:]
 	for _, v := range sub {
-		if item == v {
+		if sameItem(item, v) {
 			return v, true
 		}
 	}
 
 	sub = s.items[:sindex]
 	for _, v := range sub {
-		if item == v {
+		if sameItem(item, v) {
 			return v, true
 		}
 	}
@@ -72,19 +72,19 @@ func (s *Set[T]) get(item SetItem[T]) (SetItem[T], bool) {
 }
 
 // Set Add the given item to the set, if equivalant item was overriden, or empty space filled, true is returned
-func (s *Set[T]) Set(item SetItem[T]) bool {
+func (s *Fixed[T]) Set(item SetItem[T]) bool {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	return s.set(item)
 }
 
-func (s *Set[T]) set(item SetItem[T]) bool {
+func (s *Fixed[T]) set(item SetItem[T]) bool {
 	sindex := s.index(item)
 
 	sub := s.items[sindex:]
 	for i, v := range sub {
-		if (v.Hash == item.Hash && v.Value == item.Value) || v.IsEmpty() {
+		if sameItem(item, v) || v.IsEmpty() {
 			sub[i] = item
 			s.hashrange.Set(item.Hash)
 			return true
@@ -93,7 +93,7 @@ func (s *Set[T]) set(item SetItem[T]) bool {
 
 	sub = s.items[:sindex]
 	for i, v := range sub {
-		if (v.Hash == item.Hash && v.Value == item.Value) || v.IsEmpty() {
+		if sameItem(item, v) || v.IsEmpty() {
 			sub[i] = item
 			s.hashrange.Set(item.Hash)
 			return true
@@ -103,18 +103,18 @@ func (s *Set[T]) set(item SetItem[T]) bool {
 	return false
 }
 
-func (s *Set[T]) Update(item SetItem[T]) bool {
+func (s *Fixed[T]) Update(item SetItem[T]) bool {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	return s.update(item)
 }
 
-func (s *Set[T]) update(item SetItem[T]) bool {
+func (s *Fixed[T]) update(item SetItem[T]) bool {
 	sindex := s.index(item)
 	sub := s.items[sindex:]
 	for i, v := range sub {
-		if v.Hash == item.Hash && v.Value == item.Value {
+		if sameItem(item, v) {
 			sub[i] = item
 			return true
 		}
@@ -122,7 +122,7 @@ func (s *Set[T]) update(item SetItem[T]) bool {
 
 	sub = s.items[:sindex]
 	for i, v := range sub {
-		if v.Hash == item.Hash && v.Value == item.Value {
+		if sameItem(item, v) {
 			sub[i] = item
 			return true
 		}
@@ -131,7 +131,7 @@ func (s *Set[T]) update(item SetItem[T]) bool {
 	return false
 }
 
-func (s *Set[T]) Read() iter.Seq[SetItem[T]] {
+func (s *Fixed[T]) Read() iter.Seq[SetItem[T]] {
 	return func(yield func(SetItem[T]) bool) {
 		s.lock.RLock()
 		defer s.lock.RUnlock()
@@ -146,4 +146,9 @@ func (s *Set[T]) Read() iter.Seq[SetItem[T]] {
 			}
 		}
 	}
+}
+
+func sameItem[T comparable](a, b SetItem[T]) bool {
+	return a.Hash == b.Hash &&
+		a.Value == b.Value
 }
