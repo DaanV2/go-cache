@@ -1,16 +1,17 @@
 package collections
 
-import (
-	"github.com/daanv2/go-kit/generics"
-)
+import hashmark "github.com/daanv2/go-cache/pkg/hash/marked"
 
 type HashItem[T comparable] struct {
-	Hash uint64
+	Hash  uint64
 	Value T
 }
 
 func NewHashItem[T comparable](hash uint64, value T) HashItem[T] {
-	return HashItem[T]{hash, value}
+	return HashItem[T]{
+		Hash:  hashmark.MarkedHash(hash),
+		Value: value,
+	}
 }
 
 func (s HashItem[T]) GetHash() uint64 {
@@ -22,5 +23,5 @@ func (s HashItem[T]) GetValue() T {
 }
 
 func (s HashItem[T]) IsEmpty() bool {
-	return s == generics.Empty[HashItem[T]]()
+	return hashmark.IsEmpty(s.Hash)
 }
