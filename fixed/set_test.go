@@ -3,7 +3,6 @@ package fixed_test
 import (
 	"testing"
 
-	"github.com/daanv2/go-cache/collections"
 	"github.com/daanv2/go-cache/fixed"
 	"github.com/stretchr/testify/require"
 )
@@ -14,20 +13,20 @@ func Test_Set(t *testing.T) {
 
 	// Can set
 	for i := range amount {
-		ok := col.Set(collections.NewHashItem[uint64](i, i))
+		ok := col.Set(fixed.NewSetItem[uint64](i, i))
 		require.True(t, ok, i)
 	}
 
 	// Can get
 	for i := range amount {
-		item, ok := col.Get(collections.NewHashItem[uint64](i, i))
+		item, ok := col.Get(fixed.NewSetItem[uint64](i, i))
 		require.True(t, ok, i)
 		require.EqualValues(t, item.Value, i)
 	}
 
 	// Can set again
 	for i := range amount {
-		ok := col.Set(collections.NewHashItem[uint64](i, i))
+		ok := col.Set(fixed.NewSetItem[uint64](i, i))
 		require.True(t, ok, i)
 	}
 

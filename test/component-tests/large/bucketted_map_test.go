@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/daanv2/go-cache/collections"
+	"github.com/daanv2/go-cache/fixed"
 	"github.com/daanv2/go-cache/large"
+	"github.com/daanv2/go-cache/pkg/collections"
 	"github.com/daanv2/go-cache/pkg/hash"
 	"github.com/daanv2/go-cache/test/benchmarks"
 	test_util "github.com/daanv2/go-cache/test/util"
@@ -30,7 +31,7 @@ func Test_BuckettedMap(t *testing.T) {
 
 				v, ok := col.Get(item.ID)
 				require.True(t, ok, item.ID)
-				require.Equal(t, v.Value(), item.Data)
+				require.Equal(t, v.GetValue(), item.Data)
 			}
 
 			for _, item := range items {
@@ -40,7 +41,7 @@ func Test_BuckettedMap(t *testing.T) {
 
 				v, ok := col.Get(item.ID)
 				require.True(t, ok)
-				require.Equal(t, v.Value(), data)
+				require.Equal(t, v.GetValue(), data)
 			}
 		})
 	})
@@ -63,7 +64,7 @@ func Test_BuckettedMap_Grow(t *testing.T) {
 
 				v, ok := col.Get(item.ID)
 				require.True(t, ok)
-				require.Equal(t, v.Value(), item.Data)
+				require.Equal(t, v.GetValue(), item.Data)
 			}
 
 			col.Grow(size * 2)
@@ -71,7 +72,7 @@ func Test_BuckettedMap_Grow(t *testing.T) {
 			for _, item := range items {
 				v, ok := col.Get(item.ID)
 				require.True(t, ok)
-				require.Equal(t, v.Value(), item.Data)
+				require.Equal(t, v.GetValue(), item.Data)
 			}
 		})
 	})
@@ -80,18 +81,19 @@ func Test_BuckettedMap_Grow(t *testing.T) {
 func Test_BuckettedMap_Concurrency(t *testing.T) {
 	sizes := []uint64{100, 200, 300, 400, 1000}
 	target := []cpu.CacheKind{cpu.CacheL1, cpu.CacheL2, cpu.CacheL3}
+	keyhasher := hash.IntegerHasher[int](hash.MD5)
 
 	test_util.Case2(sizes, target, func(size uint64, cache cpu.CacheKind) {
 		col, err := large.NewBuckettedMap[int, string](
 			size*10,
 			hash.IntegerHasher[int](hash.MD5),
-			large.WithCacheTarget[collections.KeyValue[int, string]](cache),
+			large.WithCacheTarget[fixed.KeyValue[int, string]](cache),
 		)
 		require.NoError(t, err)
 
-		items := make([]collections.KeyValue[int, string], 0, int(size))
+		items := make([]benchmarks.KeyValue[int, string], 0, int(size))
 		for _, item := range test_util.Generate(int(size)) {
-			items = append(items, collections.NewKeyValue[int, string](item.ID, item.Data))
+			items = append(items, fixed.NewKeyValue[int, string](keyhasher.Hash(item.ID), item.ID, item.Data))
 		}
 		collections.Shuffle(items)
 
@@ -124,9 +126,9 @@ func Test_BuckettedMap_Debug(t *testing.T) {
 			ok := col.Set(item.ID, item.Data)
 			require.True(t, ok)
 
-			v, ok := col.Get(item.ID) //FIXME
+			v, ok := col.Get(item.ID)
 			require.True(t, ok, item.ID)
-			require.Equal(t, v.Value(), item.Data)
+			require.Equal(t, v.GetValue(), item.Data)
 		}
 
 		for _, item := range items {
@@ -136,7 +138,7 @@ func Test_BuckettedMap_Debug(t *testing.T) {
 
 			v, ok := col.Get(item.ID)
 			require.True(t, ok)
-			require.Equal(t, v.Value(), data)
+			require.Equal(t, v.GetValue(), data)
 		}
 	})
 }
