@@ -9,7 +9,7 @@ go get github.com/daanv2/go-cache
 ```
 
 ```go
-col, err := large.NewBuckettedSet[*test_util.TestItem](size*10, test_util.Hasher())
+col, err := sets.NewBuckettedSet[*test_util.TestItem](size*10, test_util.Hasher())
 require.NoError(t, err)
 
 items := test_util.Generate(int(size))
