@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/daanv2/go-cache/sets"
+	"github.com/daanv2/go-cache/test/benchmarks"
 	test_util "github.com/daanv2/go-cache/test/util"
 	"github.com/daanv2/go-optimal"
 	"github.com/stretchr/testify/require"
@@ -34,8 +35,6 @@ func Benchmark_Set_Fixed_Get(b *testing.B) {
 		}
 
 		b.Run(fmt.Sprintf("Get(%v)", size), func(t *testing.B) {
-			t.ReportMetric(float64(size), "size")
-
 			for i := 0; i < t.N; i++ {
 				for _, item := range items {
 					v, ok := col.Get(item)
@@ -44,6 +43,8 @@ func Benchmark_Set_Fixed_Get(b *testing.B) {
 					}
 				}
 			}
+
+			benchmarks.ReportAdd(t, size)
 		})
 	})
 }

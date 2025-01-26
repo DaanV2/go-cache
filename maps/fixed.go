@@ -84,7 +84,7 @@ func (s *Fixed[K, V]) set(item KeyValue[K, V]) bool {
 
 	sub := s.items[sindex:]
 	for i, spot := range sub {
-		if sameKey(item, spot) || spot.IsEmpty() {
+		if spot.IsEmpty() || sameKey(item, spot) {
 			sub[i] = item
 			s.hashrange.Update(item.Hash)
 			return true
@@ -93,7 +93,7 @@ func (s *Fixed[K, V]) set(item KeyValue[K, V]) bool {
 
 	sub = s.items[:sindex]
 	for i, spot := range sub {
-		if sameKey(item, spot) || spot.IsEmpty() {
+		if spot.IsEmpty() || sameKey(item, spot) {
 			sub[i] = item
 			s.hashrange.Update(item.Hash)
 			return true

@@ -1,4 +1,4 @@
-package component_tests
+package example_tests
 
 import (
 	"github.com/daanv2/go-cache/maps"

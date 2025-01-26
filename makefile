@@ -1,5 +1,5 @@
 assembly:
-	go build -gcflags="-S" ./test/component-tests/large > dev.S 2>&1
+	go build -gcflags="-S" ./test/component-tests/example > dev.S 2>&1
 
 .PHONY: test
 test:
@@ -9,10 +9,11 @@ show-coverage-report: test
 	go tool cover -html=reports/coverage.out
 
 benchmark:
-	go test -benchmem -run=^$$ -bench . ./test/benchmarks/large --cpuprofile ./reports/benchmark-cpu.pprof --memprofile ./reports/benchmark-mem.pprof -blockprofile ./reports/benchmark-block.pprof
+	go test -benchmem -run=^$$ -bench . ./test/benchmarks/maps --cpuprofile ./reports/benchmark-cpu-maps.pprof --memprofile ./reports/benchmark-mem-maps.pprof -blockprofile ./reports/benchmark-block-maps.pprof
+	go test -benchmem -run=^$$ -bench . ./test/benchmarks/sets --cpuprofile ./reports/benchmark-cpu-sets.pprof --memprofile ./reports/benchmark-mem-sets.pprof -blockprofile ./reports/benchmark-block-sets.pprof
 
 pprof:
-	go tool pprof --http=:8080 ./reports/benchmark-cpu.pprof
+	go tool pprof --http=:8080 ./reports/benchmark-cpu-sets.pprof ./reports/benchmark-cpu-maps.pprof
 
 pgo:
-	go tool pprof -proto ./reports/benchmark-cpu.pprof > default.pgo
+	go tool pprof -proto ./reports/benchmark-cpu-sets.pprof ./reports/benchmark-cpu-maps.pprof > default.pgo
